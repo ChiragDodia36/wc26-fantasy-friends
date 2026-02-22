@@ -32,3 +32,10 @@ def update_lineup(
 ):
     return squad_service.update_lineup(db, squad_id=squad_id, payload=payload)
 
+
+
+@router.post("/{squad_id}/wildcard")
+def use_wildcard(squad_id: str, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """Activate the wildcard chip — unlimited free transfers for the current round."""
+    from app.services.transfers_service import activate_wildcard
+    return activate_wildcard(db, squad_id=squad_id)

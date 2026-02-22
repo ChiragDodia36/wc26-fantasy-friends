@@ -17,6 +17,8 @@ def list_players(
     position: Optional[str] = None,
     max_price: Optional[float] = None,
     search: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
 ):
     q = db.query(Player)
     if team_id:
@@ -27,10 +29,9 @@ def list_players(
         q = q.filter(Player.price <= max_price)
     if search:
         q = q.filter(Player.name.ilike(f"%{search}%"))
-    return q.all()
+    return q.offset(skip).limit(limit).all()
 
 
 @router.get("/{player_id}", response_model=PlayerResponse)
 def player_detail(player_id: str, db: Session = Depends(get_db)):
     return db.get(Player, player_id)
-

@@ -14,11 +14,13 @@ router = APIRouter()
 def list_matches(
     db: Session = Depends(get_db),
     status: Optional[MatchStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
 ):
     q = db.query(Match)
     if status:
         q = q.filter(Match.status == status)
-    return q.all()
+    return q.offset(skip).limit(limit).all()
 
 
 @router.get("/live", response_model=List[MatchResponse])
@@ -29,4 +31,3 @@ def live_matches(db: Session = Depends(get_db)):
 @router.get("/{match_id}", response_model=MatchResponse)
 def match_detail(match_id: str, db: Session = Depends(get_db)):
     return db.get(Match, match_id)
-

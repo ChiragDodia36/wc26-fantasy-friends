@@ -1,12 +1,17 @@
 import secrets
 import string
-from typing import List
+from datetime import datetime
+from typing import Dict, List
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.league import League, league_memberships
+from app.models.round import Round
+from app.models.squad import Squad
 from app.models.squad_round_points import SquadRoundPoints
+from app.models.user import User
 
 
 def _generate_code() -> str:
@@ -50,11 +55,39 @@ def join_league(db: Session, user_id: str, code: str) -> League:
     return league
 
 
-def league_standings(db: Session, league_id: str):
+def league_standings(db: Session, league_id: str) -> List[Dict]:
+    """Return ranked standings for a league — total points across all rounds."""
+    # Sum all SquadRoundPoints for squads in this league
     rows = (
-        db.query(SquadRoundPoints.squad_id, SquadRoundPoints.points)
-        .filter(SquadRoundPoints.squad_id.in_(db.query(League).filter(League.id == league_id)))
+        db.query(
+            Squad.id.label("squad_id"),
+            User.username.label("username"),
+            func.coalesce(func.sum(SquadRoundPoints.points), 0).label("total_points"),
+        )
+        .join(User, User.id == Squad.user_id)
+        .outerjoin(SquadRoundPoints, SquadRoundPoints.squad_id == Squad.id)
+        .filter(Squad.league_id == league_id)
+        .group_by(Squad.id, User.username)
+        .order_by(func.coalesce(func.sum(SquadRoundPoints.points), 0).desc())
+        .all()
     )
-    # Simplified placeholder; real query should sum per user/league.
-    return []
 
+    return [
+        {
+            "rank": i + 1,
+            "squad_id": row.squad_id,
+            "username": row.username,
+            "total_points": int(row.total_points),
+        }
+        for i, row in enumerate(rows)
+    ]
+
+
+def current_round(db: Session) -> Round | None:
+    """Return the round that is currently active (now between start_utc and end_utc)."""
+    now = datetime.utcnow()
+    return (
+        db.query(Round)
+        .filter(Round.start_utc <= now, Round.end_utc >= now)
+        .first()
+    )

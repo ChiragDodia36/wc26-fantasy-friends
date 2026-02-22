@@ -4,6 +4,7 @@ from app.routers import (
     leagues_router,
     matches_router,
     players_router,
+    rounds_router,
     squads_router,
     transfers_router,
     users_router,
@@ -15,8 +16,8 @@ __all__ = [
     "leagues_router",
     "matches_router",
     "players_router",
+    "rounds_router",
     "squads_router",
     "transfers_router",
     "users_router",
 ]
-
