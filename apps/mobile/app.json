@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "WC26 Fantasy Friends",
+    "slug": "wc26-fantasy-friends",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": [
+      "wc26fantasy",
+      "com.googleusercontent.apps.1010216299733-skl545g5ca8kp92lkouvmqlsajedakpa"
+    ],
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0E1A"
+    },
+    "ios": {
+      "bundleIdentifier": "com.wc26fantasyfriends",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.wc26fantasyfriends",
+      "googleServicesFile": "./android/app/google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0A0E1A"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1010216299733-skl545g5ca8kp92lkouvmqlsajedakpa"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

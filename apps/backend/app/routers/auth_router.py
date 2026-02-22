@@ -19,3 +19,14 @@ def login(payload: auth_schemas.LoginRequest, db: Session = Depends(get_db)):
     user, token = auth_service.login(db, payload.email, payload.password)
     return auth_schemas.TokenResponse(access_token=token)
 
+
+@router.post("/firebase", response_model=auth_schemas.TokenResponse)
+def firebase_login(payload: auth_schemas.FirebaseLoginRequest, db: Session = Depends(get_db)):
+    """Exchange a Firebase ID token for our own JWT.
+
+    Called by the Expo mobile app after Google / Apple / Email sign-in via
+    Firebase Auth SDK. The Firebase token is verified server-side; we issue
+    our own JWT so all protected endpoints stay token-agnostic.
+    """
+    _, token = auth_service.firebase_login(db, id_token=payload.id_token)
+    return auth_schemas.TokenResponse(access_token=token)

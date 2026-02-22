@@ -1,7 +1,7 @@
 # ── Credentials & secrets (NEVER commit these) ────────────────────────────────
 apps/backend/firebase-service-account.json
-apps/mobile/GoogleService-Info.plist
-apps/mobile/android/app/google-services.json
+**/GoogleService-Info.plist
+**/google-services.json
 .env
 apps/backend/.env
 *.pem
@@ -37,7 +37,8 @@ apps/mobile/pubspec.lock
 
 # ── ML training data & model weights ─────────────────────────────────────────
 data/
-models/
+# Only ignore top-level models/ (ML weights) — NOT apps/backend/app/models/ (SQLAlchemy)
+/models/
 training/data/
 *.pth
 *.gguf
