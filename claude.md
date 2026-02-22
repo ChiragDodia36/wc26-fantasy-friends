@@ -1,6 +1,9 @@
 # WC26 Fantasy Friends
 
-Friends-only FIFA World Cup 2026 fantasy football monorepo: **Flutter** mobile app + **FastAPI** backend + **PostgreSQL**.
+Friends-only FIFA World Cup 2026 fantasy football monorepo: **Expo Router (TypeScript)** mobile app + **FastAPI** backend + **PostgreSQL**.
+
+> **Implementation status (as of 2026-02-22):** Steps 0–5 ✅ (26 backend tests passing). Step 6 NEXT.
+> See `docs/plans/2026-02-22-ai-manager-design.md` for full plan.
 
 ---
 
@@ -9,12 +12,15 @@ Friends-only FIFA World Cup 2026 fantasy football monorepo: **Flutter** mobile a
 | Layer | Tech | Notes |
 |-------|------|-------|
 | Backend | FastAPI + SQLAlchemy (sync) | Python 3.11+, Pydantic v2 |
-| Database | PostgreSQL 15 | via Docker Compose or local |
-| Migrations | Alembic | `apps/backend/alembic.ini` |
-| Mobile | Flutter + Riverpod | Dart, Dio HTTP client |
-| Auth | JWT (HS256) | `passlib` bcrypt hashing |
-| Data source | API-Football | World Cup fixtures, players, stats |
-| AI Coach | OpenAI-compatible LLM | Currently stub — wire in `llm_client.py` |
+| Database | PostgreSQL 15 | Docker Compose OR local Homebrew (`localhost:5432`) |
+| Migrations | Alembic | `apps/backend/alembic.ini`; run with PYTHONPATH set (see below) |
+| Mobile | Expo Router (TypeScript) | Replacing Flutter; Firebase Auth + Zustand |
+| Auth | Firebase → FastAPI JWT | Firebase verifies token, FastAPI issues its own JWT |
+| Data source | API-Football v3 (free, 100 req/day) | Seeding + post-match stats only |
+| Live scores | football-data.org (free, 10 req/min) | All live polling at 30s intervals |
+| AI Coach | Ollama (local, OpenAI-compat) | Qwen3-4B GRPO fine-tuned; stub until trained |
+| RL Executor | Stable-Baselines3 PPO | `rl_executor.pth`; trained on Colab A100 |
+| Memory | ChromaDB + sentence-transformers | Episodic memory for reflection agent |
 | Infra | Docker Compose | Postgres + backend + migrations |
 
 ---
@@ -24,22 +30,34 @@ Friends-only FIFA World Cup 2026 fantasy football monorepo: **Flutter** mobile a
 ```bash
 # 1. Env files
 cp .env.example .env
-cp apps/backend/.env.example apps/backend/.env
+cp apps/backend/.env.example apps/backend/.env   # edit with real keys
 
-# 2. Backend (local)
+# 2. Backend (local Homebrew PG already running on :5432)
 cd apps/backend
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
+source .venv/bin/activate
+PYTHONPATH=$(pwd) DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/wc26 \
+  alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# 3. Mobile
+# 3. Mobile (Expo Router — NOT Flutter)
 cd apps/mobile
-flutter pub get
-flutter run   # Android emulator: API_BASE_URL=http://10.0.2.2:8000
+npx expo start        # scan QR with Expo Go on iPhone, or press 'i' for iOS sim
 
-# OR with Docker
+# OR with Docker (maps to :5432 — stop local PG first to avoid port conflict)
 docker compose up --build   # Postgres + backend
 ```
+
+---
+
+## Dev environment notes
+
+- **Two PostgreSQL instances on port 5432:** local Homebrew PG (`/opt/homebrew`) AND Docker.
+  - Default for `alembic` / backend: local Homebrew (`localhost:5432`, user/password, db=wc26).
+  - Docker PG is a clean fresh instance — run `docker stop wc26-fantasy-friends-db-1` first if switching.
+- **Always set PYTHONPATH** when running alembic locally:
+  `PYTHONPATH=/Users/chiragdodia/Desktop/fantasy_app/wc26-fantasy-friends/apps/backend`
+- **Python venv:** `apps/backend/.venv` (Python 3.12 via Homebrew)
+- **Mobile:** Expo Router app at `apps/mobile/` — Flutter code removed
 
 ---
 
@@ -48,36 +66,69 @@ docker compose up --build   # Postgres + backend
 ```
 wc26-fantasy-friends/
 ├── docker-compose.yml          # db + backend + migrations services
-├── .env.example
+├── .env.example                # copy to .env, fill real values
+├── docs/plans/                 # design docs and implementation plans
 ├── scripts/
-│   ├── init_db.sh              # alembic upgrade head
 │   ├── seed_worldcup_data.py   # seed teams/players/matches from API-Football
-│   └── dev_run_all.sh          # docker compose up --build
+│   └── dev_run_all.sh
 │
 ├── apps/backend/               # FastAPI
 │   ├── app/
 │   │   ├── main.py             # App entrypoint, CORS, router includes
 │   │   ├── core/               # config, db, security, logging
 │   │   ├── deps/               # auth_deps (get_current_user), db_deps
-│   │   ├── integrations/       # api_football_client, llm_client (stub)
-│   │   ├── models/             # SQLAlchemy ORM models
+│   │   ├── integrations/       # api_football_client, football_data_client, llm_client, planner, memory_client
+│   │   ├── models/             # SQLAlchemy ORM models (see below)
 │   │   ├── schemas/            # Pydantic request/response schemas
 │   │   ├── services/           # Business logic layer
 │   │   ├── routers/            # API route handlers
-│   │   └── tasks/              # Background tasks (scheduler, sync)
-│   ├── tests/                  # pytest tests
+│   │   ├── tasks/              # Background tasks (APScheduler)
+│   │   └── rl/                 # RL environment, PPO policy, inference
+│   ├── alembic/                # Alembic migrations
+│   │   └── versions/
+│   │       ├── d602857e663e_initial_schema.py   # all base tables
+│   │       └── d906d91fd1c4_add_squad_wildcard_ai_decision.py
 │   ├── alembic.ini
 │   └── pyproject.toml
 │
-└── apps/mobile/                # Flutter
-    └── lib/
-        ├── main.dart           # ProviderScope → WC26App → MainShell (bottom nav)
-        ├── core/               # config, theme, routing, utils
-        ├── features/           # Feature modules (auth, squad, leagues, etc.)
-        ├── models/             # Dart data models with fromJson
-        ├── services/           # api_client, auth_service, storage_service
-        └── widgets/            # Shared widgets (LeagueCard, PlayerTile, etc.)
+├── apps/mobile/                # Expo Router (TypeScript)
+│   ├── app/                    # File-based routes
+│   │   ├── _layout.tsx         # Root layout — token check → auth or tabs
+│   │   ├── (auth)/             # login, signup, onboarding
+│   │   └── (tabs)/             # squad, leagues, matches, ai, players
+│   ├── components/             # Shared: PitchView, FormChart, FDRBadge, etc.
+│   ├── services/               # api.ts, storage.ts, firebaseAuth.ts
+│   ├── store/                  # Zustand: authStore, squadStore
+│   └── types/                  # ai.ts, player.ts, league.ts
+│
+└── training/                   # Colab A100 training scripts
+    ├── synthetic_dataset.py
+    ├── grpo_finetune.py
+    ├── export_gguf.py
+    └── Modelfile
 ```
+
+---
+
+## Backend models (current state)
+
+All use UUID string PKs. All in `app/models/`.
+
+| Model | Table | Key fields |
+|-------|-------|------------|
+| `User` | `users` | email, username, password_hash (nullable), firebase_uid (nullable) |
+| `League` | `leagues` | name, code (invite), owner_id |
+| `Team` | `teams` | external_id, name, country_code, group_name |
+| `Player` | `players` | external_id, team_id, name, position, price, is_active |
+| `Round` | `rounds` | name, start_utc, **deadline_utc**, end_utc |
+| `Match` | `matches` | external_id, home/away_team_id, kickoff_utc, status, scores |
+| `Squad` | `squads` | user_id, league_id, budget_remaining, **free_transfers_remaining**, **wildcard_used**, **wildcard_active_round_id** |
+| `SquadPlayer` | `squad_players` | squad_id, player_id, is_starting, bench_order, is_captain, is_vice_captain |
+| `SquadRoundPoints` | `squad_round_points` | squad_id, round_id, points, rank_in_league |
+| `PlayerMatchStats` | `player_match_stats` | match_id, player_id, minutes_played, goals, assists, clean_sheet, saves, fantasy_points |
+| `AIDecision` | `ai_decisions` | squad_id, round_id, decision_type, recommended_player_ids (JSONB), tot_branch, confidence_pct |
+
+Association tables: `league_memberships` (league_id, user_id), `round_matches` (round_id, match_id)
 
 ---
 
@@ -85,97 +136,84 @@ wc26-fantasy-friends/
 
 ### Pattern: models → schemas → services → routers
 
-- **Models** (`app/models/`): SQLAlchemy ORM. All use UUID string PKs.
-  - `User` — email, username, hashed_password
-  - `League` — name, code (invite), owner_id; M2M users via `league_memberships` table
-  - `Squad` — user_id, league_id, budget_remaining
-  - `SquadPlayer` — squad_id, player_id, is_starting, bench_order, is_captain, is_vice_captain
-  - `SquadRoundPoints` — squad_id, round_id, total_points
-  - `Team` — name, api_football_id, group_letter, flag_url
-  - `Player` — name, position (GK/DEF/MID/FWD), price, team_id
-  - `Match` — home/away team_id, round_id, kickoff_utc, status enum (scheduled/live/finished/postponed), scores
-  - `Round` — name, start_date, end_date, is_current
-  - `PlayerMatchStats` — player_id, match_id, minutes, goals, assists, clean_sheet, yellow/red cards, saves, bonus
-
-- **Schemas** (`app/schemas/`): Pydantic v2 models with `from_attributes = True`
-
-- **Services** (`app/services/`): Business logic, DB queries
-  - `auth_service`: signup (hash + create user + JWT), login (verify + JWT)
-  - `league_service`: create (generate 8-char code), list user leagues, join by code, standings
-  - `squad_service`: create squad, get my squad, update lineup
-  - `transfers_service`: player out/in swap with budget check
-  - `scoring_service`: Fantasy point rules (goals=6/5, assists=3, clean_sheet=4/1, cards=-1/-3, saves, bonus)
-  - `ai_coach_service`: Delegates to `llm_client` for squad-builder/lineup/transfers/QA
-  - `worldcup_sync_service`: Seed and sync from API-Football
-  - `stats_service`: Player match stats aggregation
-
-- **Routers** (`app/routers/`): Thin HTTP layer
-  - `/auth/signup`, `/auth/login` — public
-  - `/users/me` — protected (get_current_user)
-  - `/leagues` — CRUD + join by code; all protected
-  - `/squads` — create, my (by league_id), update lineup; protected
-  - `/transfers` — make transfer; protected
-  - `/matches` — list (optional status filter), detail
-  - `/players` — list (optional filters: team, position, price, search), detail
-  - `/ai/squad-builder`, `/ai/lineup`, `/ai/transfers`, `/ai/qa` — protected
+- **Schemas** (`app/schemas/`): Pydantic v2, `from_attributes = True`
+- **Services** (`app/services/`): All business logic lives here
+  - `auth_service` — signup/login + Firebase token verify (`firebase_login`)
+  - `league_service` — create, list, join by code, standings
+  - `squad_service` — create, get, update lineup
+  - `transfers_service` — budget check, deadline check, free transfer decrement, wildcard, -4pt hit applied immediately
+  - `scoring_service` — goals=6(FWD/MID)/5(DEF), assists=3, clean_sheet=4(GK/DEF)/1(MID), saves=1/3, bonus from rating
+  - `ai_coach_service` — delegates to `llm_client` (stub → real Planner+RL)
+  - `worldcup_sync_service` — API-Football seeding
+  - `feature_service` — 18-dim player feature vectors
+  - `fdr_service` — Fixture Difficulty Rating 1–5
+  - `reflection_service` — post-round ChromaDB lessons
+- **Routers** (`app/routers/`): Thin handlers
+  - `POST /auth/signup`, `POST /auth/login`, `POST /auth/firebase`
+  - `GET /users/me`
+  - `GET/POST /leagues`, `POST /leagues/{id}/join`, `GET /leagues/{id}/standings`
+  - `POST /squads`, `GET /squads/my`, `PUT /squads/{id}/lineup`, `POST /squads/{id}/wildcard`
+  - `POST /transfers`
+  - `GET /matches`, `GET /matches/{id}`
+  - `GET /players`, `GET /players/{id}`, `GET /players/{id}/form`
+  - `GET /rounds/current`
+  - `POST /ai/squad-builder`, `POST /ai/lineup`, `POST /ai/transfers`, `POST /ai/qa`
+  - `GET /ai/agent-status`, `POST /ai/reflect`
 
 ### Auth flow
-1. `POST /auth/signup` → creates user, returns UserBase
-2. `POST /auth/login` → verifies password, returns JWT token
-3. Protected routes use `Depends(get_current_user)` which decodes JWT from `Authorization: Bearer <token>`
+1. Firebase Auth on mobile → get Firebase ID token
+2. `POST /auth/firebase {id_token}` → backend verifies via firebase-admin → create/find User → return JWT
+3. All protected routes: `Authorization: Bearer <JWT>` → `Depends(get_current_user)`
 
 ### Key files
-- `app/core/config.py` — `Settings` class, reads from env vars
-- `app/core/db.py` — SQLAlchemy engine, SessionLocal, `get_db` generator, `Base`
+- `app/core/config.py` — Settings (DATABASE_URL, JWT_SECRET, API_FOOTBALL_KEY, OLLAMA_BASE_URL, etc.)
+- `app/core/db.py` — SQLAlchemy sync engine, SessionLocal, Base
 - `app/core/security.py` — bcrypt hash/verify, JWT encode/decode
-- `app/integrations/llm_client.py` — **STUB** — returns mock AI responses
+- `app/integrations/llm_client.py` — **STUB** until Step 17
 - `app/integrations/api_football_client.py` — HTTP client for API-Football v3
+- `app/integrations/football_data_client.py` — **TODO Step 3** live score polling
+- `app/integrations/planner.py` — **TODO Step 16** ToT planner via Ollama
+- `app/integrations/memory_client.py` — **TODO Step 15** ChromaDB episodic memory
+- `app/rl/environment.py` — **TODO Step 11** Gym env
+- `app/rl/executor_policy.py` — **TODO Step 12** PPO network
+- `app/rl/inference.py` — **TODO Step 13** RLExecutor inference
 
 ### Running tests
 ```bash
 cd apps/backend
-pytest tests/
+PYTHONPATH=$(pwd) pytest tests/ -v
 ```
 
 ---
 
-## Mobile architecture
+## Squad & transfer rules
 
-### Pattern: features (presentation + state + data) with Riverpod
+- **15-player squad:** 2 GK / 5 DEF / 5 MID / 3 FWD
+- **Max 2 players from the same national team**
+- **Starting XI (11):** 1 GK + min 3 DEF, 2 MID, 1 FWD (FPL-style flexible)
+- **1 free transfer per round** (`Squad.free_transfers_remaining`, resets each round)
+- **Transfer penalty: -4 pts per extra transfer**, applied immediately at transfer time
+- **Wildcard chip:** unlimited free transfers for one round, once per season (`Squad.wildcard_used`)
+- **Deadline:** `Round.deadline_utc` blocks all transfers after cutoff
 
-Each feature follows:
-```
-features/<name>/
-  ├── presentation/     # Screens (ConsumerWidget / ConsumerStatefulWidget)
-  ├── state/           # Controller (StateNotifier<State>) + Provider
-  └── data/            # Repository (Dio HTTP calls)
-```
+---
 
-### State management
-- **Riverpod** `StateNotifier<T>` pattern throughout
-- State classes are immutable with `copyWith()`
-- Providers defined at bottom of controller files
-- Example: `authControllerProvider = StateNotifierProvider<AuthController, AuthState>(...)`
+## Scoring rules
 
-### API client
-- **Dio** singleton in `services/api_client.dart`
-- Auto-injects Bearer token via interceptor (reads from `StorageService`)
-- Base URL resolved platform-aware via `AppConfig.apiBaseUrl`:
-  - Android emulator: `http://10.0.2.2:8000`
-  - Everything else: `http://localhost:8000`
-  - Override with `--dart-define API_BASE_URL=...`
-
-### Navigation
-- Direct `Navigator.push(MaterialPageRoute(...))` — no GoRouter
-- Bottom nav: My Squad, Leagues, Matches, AI Coach
-- Settings accessed via AppBar icon
-
-### Key dependencies (pubspec.yaml)
-- `flutter_riverpod: ^2.5.1` — state management
-- `dio: ^5.7.0` — HTTP client
-- `flutter_secure_storage: ^9.2.2` — token persistence
-- `intl: ^0.19.0` — date/currency formatting
-- `shared_preferences: ^2.3.2` — installed but unused
+| Event | GK | DEF | MID | FWD |
+|-------|-----|-----|-----|-----|
+| Goal | 6 | 6 | 5 | 4 |
+| Assist | 3 | 3 | 3 | 3 |
+| Clean sheet (90 min) | 4 | 4 | 1 | — |
+| Every 3 saves | 1 | — | — | — |
+| Yellow card | -1 | -1 | -1 | -1 |
+| Red card | -3 | -3 | -3 | -3 |
+| Own goal | -2 | -2 | -2 | -2 |
+| Bonus (rating ≥ 8.0) | +3 | +3 | +3 | +3 |
+| Bonus (rating ≥ 7.0) | +2 | +2 | +2 | +2 |
+| Bonus (rating ≥ 6.5) | +1 | +1 | +1 | +1 |
+| Captain | ×2 | ×2 | ×2 | ×2 |
+| Vice-captain | ×1.5 | ×1.5 | ×1.5 | ×1.5 |
 
 ---
 
@@ -183,41 +221,63 @@ features/<name>/
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `JWT_SECRET` | Yes | JWT signing secret |
+| `DATABASE_URL` | Yes | `postgresql+psycopg2://user:password@localhost:5432/wc26` |
+| `JWT_SECRET` | Yes | JWT signing secret (any long random string) |
 | `JWT_ALGORITHM` | No | Default `HS256` |
-| `API_FOOTBALL_KEY` | For sync | API-Football API key |
-| `WORLD_CUP_LEAGUE_ID` | For sync | API-Football league ID |
-| `WORLD_CUP_SEASON` | For sync | `2026` |
-| `OPENAI_API_KEY` | For AI | OpenAI-compatible API key |
+| `API_FOOTBALL_KEY` | For sync | Free API-Football key (100 req/day) |
+| `WORLD_CUP_LEAGUE_ID` | For sync | `1` (FIFA WC in API-Football) |
+| `WORLD_CUP_SEASON` | For sync | `2022` (dev) → `2026` (April 2026) |
+| `FOOTBALL_DATA_TOKEN` | For live | football-data.org free token |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | For auth | Path to `apps/backend/firebase-service-account.json` |
+| `OLLAMA_BASE_URL` | For AI | `http://localhost:11434/v1` |
+| `OLLAMA_MODEL` | For AI | `wc26-planner` (or `qwen3:4b` base) |
+| `CHROMADB_PATH` | For memory | `./data/chromadb` |
+| `RL_MODEL_PATH` | For RL | `./models/rl_executor.pth` |
 
 ---
 
-## Known gaps & TODOs
+## Implementation progress
 
-### Critical
-- **No auth gate in mobile app** — MainShell loads even without login; API calls 401. Need to check token on startup and redirect to LoginScreen.
-- **Logout doesn't clear token** — `SettingsScreen` logout only does `Navigator.popUntil`; does NOT call `AuthController.logout()` or `StorageService.clearToken()`.
-- **AI Coach LLM is stub** — `app/integrations/llm_client.py` returns hardcoded mock responses. Wire real OpenAI (or compatible) provider.
+| Step | Status | Description |
+|------|--------|-------------|
+| 0 | ✅ Done | .gitignore + git init + first commit |
+| 1 | ✅ Done | Dockerfile + Alembic (3 migrations applied: initial_schema, squad_wildcard_ai_decision, firebase_uid) |
+| 2 | ✅ Done | Wire real API-Football HTTP client (5 tests) |
+| 3 | ✅ Done | Background tasks: football-data.org live polling + sync_stats (6 tests) |
+| 4 | ✅ Done | Business logic: transfers (deadline/budget/wildcard/-4pt), scoring, standings, rounds, wildcard endpoint (6 tests) |
+| 5 | ✅ Done | Expo Router scaffold + Firebase auth (4 tests): POST /auth/firebase, login/signup screens, Zustand authStore, SecureStore token |
+| 6 | ⏳ Next | All screens (squad, leagues, matches, AI coach) |
+| 7 | — | Shared components (PitchView, FormChart, FDRBadge, etc.) |
+| 8 | — | AI Coach screen (ToT branch cards + Q&A) |
+| 9 | — | Feature service (18-dim vectors) + FDR service |
+| 10 | — | Training data collection scripts |
+| 11 | — | RL Gym environment |
+| 12 | — | PPO policy network |
+| 13 | — | RL inference integration |
+| 14 | — | GRPO fine-tuning scripts (Colab A100 + vLLM) |
+| 15 | — | ChromaDB episodic memory |
+| 16 | — | Tree of Thought planner via Ollama |
+| 17 | — | Replace LLM stub with real Planner+RL |
+| 18 | — | Reflection agent |
+| 19 | — | New backend endpoints (agent-status, player form) |
+| 20 | — | Update all dependencies |
+| 21 | — | Environment variables (.env.example) |
 
-### Mobile
-- Hardcoded `'default'` league ID in `MySquadScreen` and `AICoachChatScreen`
-- `EditSquadScreen` and `LineupScreen` are placeholder text only
-- `LeagueDetailScreen` standings section is placeholder
-- `PlayerDetailScreen` fixtures section is placeholder
-- `TransfersScreen` uses raw text field for player IDs (no picker)
-- No error handling on API calls — unhandled exceptions crash the app
-- `app_router.dart` exists but unused; all navigation is imperative
-- No dark theme
-- `shared_preferences` dependency installed but unused
-- `notification_service.dart` is a stub
+---
+
+## Known gaps & in-progress (after Step 5)
+
+### Mobile — Step 6 NEXT
+- Tab screens are placeholder stubs — full UI coming in Step 6
+- No onboarding flow yet (create/join league after first login)
+- `GoogleService-Info.plist` for iOS not yet at `apps/mobile/GoogleService-Info.plist` — needed for native iOS Google Sign-In
+- Native iOS/Android build requires `npx expo run:ios` (Expo Go supports JS-only modules; @react-native-firebase needs dev build)
 
 ### Backend
-- Alembic migrations may not be fully up to date with all models
-- No Dockerfile in `apps/backend/` — docker-compose references `build: ./apps/backend` but no Dockerfile found
-- No pagination on list endpoints
-- No rate limiting
-- CORS is open (`allow_origins=["*"]`)
+- `llm_client.py` still stub — real Ollama integration in Step 17
+- `feature_service.py`, `fdr_service.py` not yet implemented (Step 9)
+- `planner.py`, `memory_client.py` not yet implemented (Steps 15–16)
+- RL environment + policy not yet implemented (Steps 11–13)
 
 ---
 
@@ -229,18 +289,18 @@ features/<name>/
 - Protected endpoints use `user=Depends(get_current_user)`
 - DB sessions via `db: Session = Depends(get_db)`
 - IDs are UUID strings generated with `uuid.uuid4()`
+- **TDD:** write failing pytest test first, then implement, then verify pass
 
-### Mobile
-- New features go in `lib/features/<name>/` with `presentation/`, `state/`, `data/` subdirs
-- State: immutable state class + `StateNotifier` controller + provider
-- Repositories handle Dio calls; controllers handle state transitions
-- Use `ConsumerWidget` or `ConsumerStatefulWidget` for screens
-- Shared widgets in `lib/widgets/`
-- Models in `lib/models/` with `fromJson()` factory constructors
+### Mobile (Expo Router)
+- File-based routing under `app/`
+- State: Zustand stores in `store/`
+- API calls: Axios singleton in `services/api.ts` with Bearer token interceptor
+- Secure token storage: `expo-secure-store` on native, `localStorage` on web
 
 ### Domain rules
 - All leagues are **private** — join only via invite code
 - Scoring rules defined in `app/services/scoring_service.py`
-- Squad budget is tracked per squad; transfers check budget constraints
+- Squad budget is tracked per squad; transfers check budget + deadline + wildcard
 - Player positions: GK, DEF, MID, FWD
-- Match statuses: scheduled, live, finished, postponed
+- Match statuses: SCHEDULED, LIVE, FINISHED (enum in `app/models/match.py`)
+- Player prices: auto-set at seed time by position (GK £4.5m, DEF £5m, MID £5.5m, FWD £6m)
