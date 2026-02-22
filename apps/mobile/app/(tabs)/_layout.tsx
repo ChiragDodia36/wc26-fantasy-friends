@@ -31,6 +31,7 @@ export default function TabsLayout() {
         name="squad"
         options={{
           title: 'My Squad',
+          headerShown: false, // squad has its own Stack navigator
           tabBarIcon: ({ focused }) => <TabIcon name="people" focused={focused} />,
         }}
       />
@@ -48,6 +49,8 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="football" focused={focused} />,
         }}
       />
+      {/* Hidden screens — shown via deep links, not tab bar */}
+      <Tabs.Screen name="players" options={{ href: null }} />
       <Tabs.Screen
         name="ai"
         options={{
