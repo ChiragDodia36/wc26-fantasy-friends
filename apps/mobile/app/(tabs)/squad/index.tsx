@@ -118,7 +118,7 @@ export default function SquadScreen() {
         </>
       }
       data={starters}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item) => item.player_id}
       renderItem={({ item }) => (
         <View style={styles.playerCard}>
           <View style={[styles.posBadge, { backgroundColor: POSITION_COLOR[item.player?.position ?? 'MID'] ?? '#555577' }]}>
@@ -143,7 +143,7 @@ export default function SquadScreen() {
           <>
             <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Bench</Text>
             {bench.map((item) => (
-              <View key={item.id} style={[styles.playerCard, { opacity: 0.7 }]}>
+              <View key={item.player_id} style={[styles.playerCard, { opacity: 0.7 }]}>
                 <View style={[styles.posBadge, { backgroundColor: '#444466' }]}>
                   <Text style={styles.posText}>{item.player?.position ?? '?'}</Text>
                 </View>
