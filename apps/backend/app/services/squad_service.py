@@ -1,22 +1,49 @@
+import uuid
 from decimal import Decimal
 from typing import List
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.models.league import League, league_memberships
 from app.models.player import Player
 from app.models.squad import Squad
 from app.models.squad_player import SquadPlayer
 from app.schemas.squad_schemas import LineupUpdateRequest
 
 
-MAX_PLAYERS_PER_TEAM = 3
+MAX_PLAYERS_PER_TEAM = 2
 MAX_SQUAD = 15
 POSITION_COUNTS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
 BUDGET = Decimal("100.0")
 
 
+def _ensure_league(db: Session, league_id: str, user_id: str) -> str:
+    """Ensure the league exists; auto-create a default league if needed."""
+    league = db.query(League).filter(League.id == league_id).first()
+    if league:
+        return league.id
+    # Auto-create for 'default' league
+    if league_id == "default":
+        league = League(
+            id="default",
+            name="My Team",
+            code="DEFAULT-" + str(uuid.uuid4())[:8],
+            owner_id=user_id,
+        )
+        db.add(league)
+        db.flush()
+        # Add owner as member
+        db.execute(league_memberships.insert().values(league_id=league.id, user_id=user_id))
+        db.flush()
+        return league.id
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="League not found")
+
+
 def create_squad(db: Session, user_id: str, league_id: str, player_ids: List[str], budget_remaining: float) -> Squad:
+    # Ensure league exists
+    league_id = _ensure_league(db, league_id, user_id)
+
     if len(player_ids) != MAX_SQUAD:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Squad must have 15 players")
     players = db.query(Player).filter(Player.id.in_(player_ids)).all()

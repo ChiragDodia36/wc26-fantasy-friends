@@ -1,7 +1,5 @@
 /**
- * Sign-up screen — Email/Password only.
- * Social sign-in already creates an account on first use; no separate sign-up
- * needed for Google/Apple.
+ * Sign-up screen — creates account via backend API.
  */
 import { useState } from 'react';
 import {
@@ -13,10 +11,13 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
-import { signUpWithEmail } from '@/services/firebaseAuth';
+import api from '@/services/api';
+import { setToken } from '@/services/storage';
 
 export default function SignupScreen() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -24,7 +25,7 @@ export default function SignupScreen() {
   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
 
   async function handleSignUp() {
-    if (!email || !password) {
+    if (!username || !email || !password) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -38,10 +39,15 @@ export default function SignupScreen() {
     }
     setLoading(true);
     try {
-      await signUpWithEmail(email, password);
+      // Create account
+      await api.post('/auth/signup', { email, username, password });
+      // Auto-login after signup
+      const loginRes = await api.post('/auth/login', { email, password });
+      await setToken(loginRes.data.access_token);
       setAuthenticated(true);
     } catch (err: any) {
-      Alert.alert('Sign-Up Failed', err?.message ?? 'Unknown error');
+      const msg = err?.response?.data?.detail ?? err?.message ?? 'Unknown error';
+      Alert.alert('Sign-Up Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -53,6 +59,14 @@ export default function SignupScreen() {
       <Text style={styles.sub}>Join a friends league for WC 2026</Text>
 
       <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          placeholderTextColor="#8888AA"
+          autoCapitalize="none"
+          value={username}
+          onChangeText={setUsername}
+        />
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -85,6 +99,10 @@ export default function SignupScreen() {
           ) : (
             <Text style={styles.buttonText}>Create Account</Text>
           )}
+        </Pressable>
+
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>Back to Sign In</Text>
         </Pressable>
       </View>
     </View>
@@ -132,5 +150,13 @@ const styles = StyleSheet.create({
     color: '#0A0E1A',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  backButton: {
+    padding: 14,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#8888AA',
+    fontSize: 15,
   },
 });

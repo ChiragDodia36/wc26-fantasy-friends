@@ -66,7 +66,6 @@ export function PlayerPicker({ players, selectedIds, onSelect, disabled }: Playe
 
       <FlashList
         data={filtered}
-        estimatedItemSize={60}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const isSelected = selectedIds?.has(item.id);
@@ -92,7 +91,7 @@ export function PlayerPicker({ players, selectedIds, onSelect, disabled }: Playe
               </View>
               <View style={styles.info}>
                 <Text style={[styles.name, isDisabled && styles.nameDisabled]}>{item.name}</Text>
-                <Text style={styles.price}>£{Number(item.price).toFixed(1)}m</Text>
+                <Text style={styles.price}>{item.team_name ?? 'Unknown'} · £{Number(item.price).toFixed(1)}m</Text>
               </View>
               {isSelected && <Text style={styles.checkmark}>✓</Text>}
             </Pressable>

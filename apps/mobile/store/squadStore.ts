@@ -34,7 +34,7 @@ export const useSquadStore = create<SquadState>((set, get) => ({
     try {
       const [squadRes, playersRes] = await Promise.all([
         api.get<Squad>(`/squads/my?league_id=${leagueId}`),
-        api.get<Player[]>('/players?limit=200'),
+        api.get<Player[]>('/players?limit=1500'),
       ]);
       set({ squad: squadRes.data, players: playersRes.data, loading: false });
     } catch (err: any) {

@@ -5,10 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": [
-      "wc26fantasy",
-      "com.googleusercontent.apps.1010216299733-skl545g5ca8kp92lkouvmqlsajedakpa"
-    ],
+    "scheme": "wc26fantasy",
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -17,12 +14,10 @@
     },
     "ios": {
       "bundleIdentifier": "com.wc26fantasyfriends",
-      "googleServicesFile": "./GoogleService-Info.plist",
       "supportsTablet": true
     },
     "android": {
       "package": "com.wc26fantasyfriends",
-      "googleServicesFile": "./android/app/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A0E1A"
@@ -34,15 +29,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.1010216299733-skl545g5ca8kp92lkouvmqlsajedakpa"
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true

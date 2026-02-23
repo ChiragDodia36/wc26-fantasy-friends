@@ -26,6 +26,7 @@ export interface Player {
   position: 'GK' | 'DEF' | 'MID' | 'FWD';
   price: number;
   team_id: string;
+  team_name: string | null;
   is_active: boolean;
 }
 
@@ -33,11 +34,14 @@ export interface Match {
   id: string;
   home_team_id: string;
   away_team_id: string;
-  round_id: string;
+  home_team_name: string | null;
+  away_team_name: string | null;
   kickoff_utc: string;
-  status: 'scheduled' | 'live' | 'finished' | 'postponed';
+  venue: string | null;
+  status: 'SCHEDULED' | 'LIVE' | 'FINISHED';
   home_score: number | null;
   away_score: number | null;
+  round_name: string | null;
 }
 
 export interface Round {

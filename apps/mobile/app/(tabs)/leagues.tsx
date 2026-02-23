@@ -15,7 +15,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Link } from 'expo-router';
 import { useLeagueStore } from '@/store/leagueStore';
 import type { League } from '@/types/api';
 
@@ -60,15 +59,12 @@ export default function LeaguesScreen() {
   };
 
   const renderLeague = ({ item }: { item: League }) => (
-    <Link href={`/(tabs)/leagues/${item.id}`} asChild>
-      <Pressable style={styles.leagueCard}>
-        <View style={styles.leagueCardLeft}>
-          <Text style={styles.leagueName}>{item.name}</Text>
-          <Text style={styles.leagueCode}>Code: {item.code}</Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
-    </Link>
+    <Pressable style={styles.leagueCard}>
+      <View style={styles.leagueCardLeft}>
+        <Text style={styles.leagueName}>{item.name}</Text>
+        <Text style={styles.leagueCode}>Code: {item.code}</Text>
+      </View>
+    </Pressable>
   );
 
   return (
@@ -161,7 +157,6 @@ const styles = StyleSheet.create({
   leagueCardLeft: { flex: 1 },
   leagueName: { fontSize: 17, fontWeight: 'bold', color: '#FFFFFF' },
   leagueCode: { fontSize: 13, color: '#8888AA', marginTop: 4 },
-  chevron: { color: '#555577', fontSize: 24 },
   emptyText: { fontSize: 20, color: '#FFFFFF', fontWeight: 'bold', marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: '#8888AA', textAlign: 'center' },
   modal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24 },

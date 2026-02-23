@@ -8,22 +8,31 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { configureGoogleSignIn } from '@/services/firebaseAuth';
-import { getToken } from '@/services/storage';
+import { getToken, clearToken } from '@/services/storage';
 import { useAuthStore } from '@/store/authStore';
-
-configureGoogleSignIn();
+import api from '@/services/api';
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isLoading, setAuthenticated, setLoading } = useAuthStore();
 
-  // On mount: check persisted token to restore session
+  // On mount: check persisted token AND validate it with the backend
   useEffect(() => {
     (async () => {
       const token = await getToken();
-      setAuthenticated(!!token);
+      if (token) {
+        try {
+          await api.get('/users/me');
+          setAuthenticated(true);
+        } catch {
+          // Token is invalid or user was deleted — clear it
+          await clearToken();
+          setAuthenticated(false);
+        }
+      } else {
+        setAuthenticated(false);
+      }
       setLoading(false);
     })();
   }, []);

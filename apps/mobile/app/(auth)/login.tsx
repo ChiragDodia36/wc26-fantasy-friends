@@ -1,14 +1,10 @@
 /**
- * Login screen — Email/Password + Google Sign-In.
- * Apple Sign-In is shown only on iOS (App Store requirement).
- *
- * After successful sign-in the root layout's useEffect detects the
- * auth state change and redirects to /(tabs)/squad automatically.
+ * Login screen — Email/Password sign-in via backend API.
+ * Google Sign-In requires a native dev build (not available in Expo Go).
  */
 import { useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -17,7 +13,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Link } from 'expo-router';
-import { signInWithEmail, signInWithGoogle } from '@/services/firebaseAuth';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/services/api';
 import { setToken } from '@/services/storage';
@@ -35,24 +30,12 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      await signInWithEmail(email, password);
+      const res = await api.post('/auth/login', { email, password });
+      await setToken(res.data.access_token);
       setAuthenticated(true);
     } catch (err: any) {
-      Alert.alert('Login Failed', err?.message ?? 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleGoogleLogin() {
-    setLoading(true);
-    try {
-      await signInWithGoogle();
-      setAuthenticated(true);
-    } catch (err: any) {
-      if (err?.code !== 'SIGN_IN_CANCELLED') {
-        Alert.alert('Google Sign-In Failed', err?.message ?? 'Unknown error');
-      }
+      const msg = err?.response?.data?.detail ?? err?.message ?? 'Unknown error';
+      Alert.alert('Login Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -63,7 +46,6 @@ export default function LoginScreen() {
     try {
       const devEmail = 'dev@test.com';
       const devPass = 'devpass123';
-      // Try login first; if user doesn't exist, sign up then login
       try {
         const loginRes = await api.post('/auth/login', { email: devEmail, password: devPass });
         await setToken(loginRes.data.access_token);
@@ -74,7 +56,7 @@ export default function LoginScreen() {
       }
       setAuthenticated(true);
     } catch (err: any) {
-      Alert.alert('Dev Login Failed', err?.message ?? 'Is the backend running on localhost:8000?');
+      Alert.alert('Dev Login Failed', err?.message ?? 'Is the backend running?');
     } finally {
       setLoading(false);
     }
@@ -125,18 +107,6 @@ export default function LoginScreen() {
         </Link>
       </View>
 
-      {/* Divider */}
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      {/* Social sign-in */}
-      <Pressable style={styles.googleButton} onPress={handleGoogleLogin} disabled={loading}>
-        <Text style={styles.googleButtonText}>Continue with Google</Text>
-      </Pressable>
-
       {/* Dev mode bypass — remove before production */}
       {__DEV__ && (
         <Pressable style={styles.devButton} onPress={handleDevLogin} disabled={loading}>
@@ -149,7 +119,6 @@ export default function LoginScreen() {
 
 const GOLD = '#FFD700';
 const NAVY = '#0A0E1A';
-const CARD = '#141824';
 const INPUT_BG = '#1E2333';
 
 const styles = StyleSheet.create({
@@ -213,40 +182,12 @@ const styles = StyleSheet.create({
     color: '#AAAACC',
     fontSize: 15,
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#2E3550',
-  },
-  dividerText: {
-    color: '#8888AA',
-    marginHorizontal: 12,
-    fontSize: 14,
-  },
-  googleButton: {
-    backgroundColor: CARD,
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2E3550',
-  },
-  googleButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   devButton: {
     backgroundColor: '#2E3550',
     borderRadius: 10,
     padding: 14,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 24,
     borderWidth: 1,
     borderColor: '#FF6B6B',
     borderStyle: 'dashed',
