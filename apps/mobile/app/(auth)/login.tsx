@@ -19,6 +19,8 @@ import {
 import { Link } from 'expo-router';
 import { signInWithEmail, signInWithGoogle } from '@/services/firebaseAuth';
 import { useAuthStore } from '@/store/authStore';
+import api from '@/services/api';
+import { setToken } from '@/services/storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -51,6 +53,28 @@ export default function LoginScreen() {
       if (err?.code !== 'SIGN_IN_CANCELLED') {
         Alert.alert('Google Sign-In Failed', err?.message ?? 'Unknown error');
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDevLogin() {
+    setLoading(true);
+    try {
+      const devEmail = 'dev@test.com';
+      const devPass = 'devpass123';
+      // Try login first; if user doesn't exist, sign up then login
+      try {
+        const loginRes = await api.post('/auth/login', { email: devEmail, password: devPass });
+        await setToken(loginRes.data.access_token);
+      } catch {
+        await api.post('/auth/signup', { email: devEmail, username: 'DevUser', password: devPass });
+        const loginRes = await api.post('/auth/login', { email: devEmail, password: devPass });
+        await setToken(loginRes.data.access_token);
+      }
+      setAuthenticated(true);
+    } catch (err: any) {
+      Alert.alert('Dev Login Failed', err?.message ?? 'Is the backend running on localhost:8000?');
     } finally {
       setLoading(false);
     }
@@ -112,6 +136,13 @@ export default function LoginScreen() {
       <Pressable style={styles.googleButton} onPress={handleGoogleLogin} disabled={loading}>
         <Text style={styles.googleButtonText}>Continue with Google</Text>
       </Pressable>
+
+      {/* Dev mode bypass — remove before production */}
+      {__DEV__ && (
+        <Pressable style={styles.devButton} onPress={handleDevLogin} disabled={loading}>
+          <Text style={styles.devButtonText}>Dev Mode (Skip Login)</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -208,6 +239,21 @@ const styles = StyleSheet.create({
   googleButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  devButton: {
+    backgroundColor: '#2E3550',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+    borderStyle: 'dashed',
+  },
+  devButtonText: {
+    color: '#FF6B6B',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
