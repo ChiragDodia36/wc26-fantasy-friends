@@ -1,11 +1,12 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.models.player import Player
 from app.schemas.player_schemas import PlayerResponse
+from app.services.feature_service import get_player_form
 
 router = APIRouter()
 
@@ -35,3 +36,12 @@ def list_players(
 @router.get("/{player_id}", response_model=PlayerResponse)
 def player_detail(player_id: str, db: Session = Depends(get_db)):
     return db.get(Player, player_id)
+
+
+@router.get("/{player_id}/form")
+def player_form(player_id: str, db: Session = Depends(get_db)):
+    """Player form snapshot — last 5 game points, total tournament points, upcoming FDR."""
+    form = get_player_form(player_id, db)
+    if form is None:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return form
