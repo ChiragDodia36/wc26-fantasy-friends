@@ -2,7 +2,7 @@
 
 Friends-only FIFA World Cup 2026 fantasy football monorepo: **Expo Router (TypeScript)** mobile app + **FastAPI** backend + **PostgreSQL**.
 
-> **Implementation status (as of 2026-02-22):** Steps 0–5 ✅ (26 backend tests passing). Step 6 NEXT.
+> **Implementation status (as of 2026-02-23):** All 22 steps COMPLETE ✅ (51 backend tests passing).
 > See `docs/plans/2026-02-22-ai-manager-design.md` for full plan.
 
 ---
@@ -246,38 +246,38 @@ PYTHONPATH=$(pwd) pytest tests/ -v
 | 3 | ✅ Done | Background tasks: football-data.org live polling + sync_stats (6 tests) |
 | 4 | ✅ Done | Business logic: transfers (deadline/budget/wildcard/-4pt), scoring, standings, rounds, wildcard endpoint (6 tests) |
 | 5 | ✅ Done | Expo Router scaffold + Firebase auth (4 tests): POST /auth/firebase, login/signup screens, Zustand authStore, SecureStore token |
-| 6 | ⏳ Next | All screens (squad, leagues, matches, AI coach) |
-| 7 | — | Shared components (PitchView, FormChart, FDRBadge, etc.) |
-| 8 | — | AI Coach screen (ToT branch cards + Q&A) |
-| 9 | — | Feature service (18-dim vectors) + FDR service |
-| 10 | — | Training data collection scripts |
-| 11 | — | RL Gym environment |
-| 12 | — | PPO policy network |
-| 13 | — | RL inference integration |
-| 14 | — | GRPO fine-tuning scripts (Colab A100 + vLLM) |
-| 15 | — | ChromaDB episodic memory |
-| 16 | — | Tree of Thought planner via Ollama |
-| 17 | — | Replace LLM stub with real Planner+RL |
-| 18 | — | Reflection agent |
-| 19 | — | New backend endpoints (agent-status, player form) |
-| 20 | — | Update all dependencies |
-| 21 | — | Environment variables (.env.example) |
+| 6 | ✅ Done | All screens (squad, leagues, matches, AI coach) |
+| 7 | ✅ Done | Shared components (PitchView, FormChart, FDRBadge, etc.) |
+| 8 | ✅ Done | AI Coach screen (ToT branch cards + Q&A chat) |
+| 9 | ✅ Done | Feature service + FDR service + GET /players/{id}/form (10 tests) |
+| 10 | ✅ Done | Training data collection scripts (FPL + WC datasets) |
+| 11 | ✅ Done | RL Gym environment — FantasyEnv with action masking (9 tests) |
+| 12 | ✅ Done | PPO policy network — NumPy MLP + REINFORCE trainer (6 tests) |
+| 13 | ✅ Done | RL inference integration (suggest_squad_rl, suggest_lineup_rl) |
+| 14 | ✅ Done | GRPO fine-tuning scripts (synthetic dataset + DPO/LoRA + GGUF export) |
+| 15 | ✅ Done | ChromaDB episodic memory (store/query lessons) |
+| 16 | ✅ Done | Tree of Thought planner via Ollama (3 branches + fallback) |
+| 17 | ✅ Done | Replace LLM stub with real Planner+RL in ai_coach_service |
+| 18 | ✅ Done | Reflection agent (post-round analysis → episodic memory) |
+| 19 | ✅ Done | New endpoints: GET /ai/agent-status, POST /ai/reflect, GET /players/{id}/form |
+| 20 | ✅ Done | Updated pyproject.toml (numpy, gymnasium, chromadb, pandas) |
+| 21 | ✅ Done | Updated .env.example with all env vars |
 
 ---
 
-## Known gaps & in-progress (after Step 5)
+## Known gaps & next steps
 
-### Mobile — Step 6 NEXT
-- Tab screens are placeholder stubs — full UI coming in Step 6
+### Mobile
 - No onboarding flow yet (create/join league after first login)
-- `GoogleService-Info.plist` for iOS not yet at `apps/mobile/GoogleService-Info.plist` — needed for native iOS Google Sign-In
-- Native iOS/Android build requires `npx expo run:ios` (Expo Go supports JS-only modules; @react-native-firebase needs dev build)
+- `GoogleService-Info.plist` for iOS not yet added — needed for native iOS Google Sign-In
+- Native iOS/Android build requires `npx expo run:ios` (Expo Go supports JS-only modules)
+- Dev mode bypass button on login screen (remove before production)
 
-### Backend
-- `llm_client.py` still stub — real Ollama integration in Step 17
-- `feature_service.py`, `fdr_service.py` not yet implemented (Step 9)
-- `planner.py`, `memory_client.py` not yet implemented (Steps 15–16)
-- RL environment + policy not yet implemented (Steps 11–13)
+### Backend / AI
+- Ollama must be running locally for real ToT planner responses (falls back to mock)
+- RL policy is untrained (random init) — run `python -m app.rl.train_ppo` to train
+- GRPO fine-tuning requires Colab A100 — scripts ready in `training/`
+- `llm_client.py` still exists as legacy stub (superseded by `planner.py`)
 
 ---
 
