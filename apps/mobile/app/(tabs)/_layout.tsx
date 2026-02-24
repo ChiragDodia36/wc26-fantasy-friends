@@ -1,5 +1,5 @@
 /**
- * Bottom tab navigator — 4 main sections.
+ * Bottom tab navigator — 5 main sections.
  * Deep navy theme with gold active tints.
  */
 import { Tabs } from 'expo-router';
@@ -28,11 +28,25 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="squad"
         options={{
-          title: 'My Squad',
-          headerShown: false, // squad has its own Stack navigator
+          title: 'Squad',
+          headerShown: false,
           tabBarIcon: ({ focused }) => <TabIcon name="people" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: 'Matches',
+          tabBarIcon: ({ focused }) => <TabIcon name="football" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -43,21 +57,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="matches"
+        name="more"
         options={{
-          title: 'Matches',
-          tabBarIcon: ({ focused }) => <TabIcon name="football" focused={focused} />,
+          title: 'More',
+          tabBarIcon: ({ focused }) => <TabIcon name="ellipsis-horizontal" focused={focused} />,
         }}
       />
-      {/* Hidden screens — shown via deep links, not tab bar */}
+      {/* Hidden screens — accessible via deep links, not visible in tab bar */}
       <Tabs.Screen name="players" options={{ href: null }} />
-      <Tabs.Screen
-        name="ai"
-        options={{
-          title: 'AI Coach',
-          tabBarIcon: ({ focused }) => <TabIcon name="bulb" focused={focused} />,
-        }}
-      />
+      <Tabs.Screen name="ai" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -6,8 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
     ai_router,
     auth_router,
+    home_router,
     leagues_router,
     matches_router,
+    news_router,
     players_router,
     rounds_router,
     squads_router,
@@ -44,6 +46,8 @@ def create_app() -> FastAPI:
     app.include_router(players_router.router, prefix="/players", tags=["players"])
     app.include_router(rounds_router.router, prefix="/rounds", tags=["rounds"])
     app.include_router(ai_router.router, prefix="/ai", tags=["ai"])
+    app.include_router(news_router.router, prefix="/news", tags=["news"])
+    app.include_router(home_router.router, prefix="/home", tags=["home"])
     return app
 
 

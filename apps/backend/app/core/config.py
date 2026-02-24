@@ -44,5 +44,8 @@ class Settings(BaseSettings):
     # ChromaDB episodic memory
     chromadb_path: str = Field(default="./data/chromadb", alias="CHROMADB_PATH")
 
+    # NewsAPI (free tier, 100 req/day)
+    news_api_key: Optional[str] = Field(default=None, alias="NEWS_API_KEY")
+
 
 settings = Settings()
