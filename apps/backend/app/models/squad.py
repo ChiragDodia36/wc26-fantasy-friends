@@ -16,6 +16,8 @@ class Squad(Base):
     budget_remaining = Column(Numeric(10, 2), nullable=False)
     free_transfers_remaining = Column(Integer, default=1, nullable=False)
     wildcard_used = Column(Boolean, default=False, nullable=False)
+    team_name = Column(String(100), nullable=True)
+    formation = Column(String(20), default="4-4-2", nullable=False)
     wildcard_active_round_id = Column(String, ForeignKey("rounds.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

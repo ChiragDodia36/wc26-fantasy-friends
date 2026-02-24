@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import api from '@/services/api';
-import type { Squad, Player, Round } from '@/types/api';
+import type { Squad, Player, Round, SquadPlayer } from '@/types/api';
 
 interface SquadState {
   squad: Squad | null;
@@ -19,6 +19,10 @@ interface SquadState {
   makeTransfer: (playerOutId: string, playerInId: string) => Promise<void>;
   activateWildcard: () => Promise<void>;
   setCaptain: (playerId: string) => Promise<void>;
+  setViceCaptain: (playerId: string) => Promise<void>;
+  updateLineup: (players: SquadPlayer[], formation?: string) => Promise<void>;
+  updateTeamName: (name: string) => Promise<void>;
+  swapPlayers: (starterId: string, benchId: string) => Promise<void>;
 }
 
 export const useSquadStore = create<SquadState>((set, get) => ({
@@ -61,7 +65,6 @@ export const useSquadStore = create<SquadState>((set, get) => ({
         player_out_id: playerOutId,
         player_in_id: playerInId,
       });
-      // Re-fetch to get updated state
       await get().fetchSquad(get().leagueId!);
     } catch (err: any) {
       set({ error: err?.response?.data?.detail ?? 'Transfer failed' });
@@ -79,13 +82,57 @@ export const useSquadStore = create<SquadState>((set, get) => ({
   setCaptain: async (playerId) => {
     const { squad } = get();
     if (!squad) return;
-    // Build lineup payload with new captain
     const players = squad.players.map((sp) => ({
       ...sp,
       is_captain: sp.player_id === playerId,
-      is_vice_captain: false,
+      is_vice_captain: sp.is_vice_captain && sp.player_id !== playerId,
     }));
-    await api.put(`/squads/${squad.id}/lineup`, { players });
+    await api.put(`/squads/${squad.id}/lineup`, { players, formation: squad.formation });
+    await get().fetchSquad(get().leagueId!);
+  },
+
+  setViceCaptain: async (playerId) => {
+    const { squad } = get();
+    if (!squad) return;
+    const players = squad.players.map((sp) => ({
+      ...sp,
+      is_vice_captain: sp.player_id === playerId,
+      is_captain: sp.is_captain && sp.player_id !== playerId,
+    }));
+    await api.put(`/squads/${squad.id}/lineup`, { players, formation: squad.formation });
+    await get().fetchSquad(get().leagueId!);
+  },
+
+  updateLineup: async (players, formation) => {
+    const { squad } = get();
+    if (!squad) return;
+    await api.put(`/squads/${squad.id}/lineup`, {
+      players,
+      formation: formation ?? squad.formation,
+    });
+    await get().fetchSquad(get().leagueId!);
+  },
+
+  updateTeamName: async (name) => {
+    const { squad } = get();
+    if (!squad) return;
+    await api.put(`/squads/${squad.id}/team-name`, { team_name: name });
+    set({ squad: { ...squad, team_name: name } });
+  },
+
+  swapPlayers: async (starterId, benchId) => {
+    const { squad } = get();
+    if (!squad) return;
+    const players = squad.players.map((sp) => {
+      if (sp.player_id === starterId) {
+        return { ...sp, is_starting: false, bench_order: 4 };
+      }
+      if (sp.player_id === benchId) {
+        return { ...sp, is_starting: true, bench_order: null };
+      }
+      return sp;
+    });
+    await api.put(`/squads/${squad.id}/lineup`, { players, formation: squad.formation });
     await get().fetchSquad(get().leagueId!);
   },
 }));

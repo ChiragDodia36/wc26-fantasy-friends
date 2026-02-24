@@ -67,5 +67,7 @@ export interface Squad {
   budget_remaining: number;
   free_transfers_remaining: number;
   wildcard_used: boolean;
+  team_name: string | null;
+  formation: string;
   players: SquadPlayer[];
 }

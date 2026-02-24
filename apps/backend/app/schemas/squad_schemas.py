@@ -15,6 +15,7 @@ class SquadCreateRequest(BaseModel):
     league_id: str
     player_ids: List[str]
     budget_remaining: float
+    team_name: Optional[str] = None
 
 
 class SquadResponse(BaseModel):
@@ -22,6 +23,9 @@ class SquadResponse(BaseModel):
     league_id: str
     user_id: str
     budget_remaining: float
+    team_name: Optional[str] = None
+    formation: str = "4-4-2"
+    free_transfers_remaining: int = 1
     players: List[SquadPlayerLine] = []
 
     class Config:
@@ -30,4 +34,9 @@ class SquadResponse(BaseModel):
 
 class LineupUpdateRequest(BaseModel):
     players: List[SquadPlayerLine]
+    formation: Optional[str] = None
+
+
+class TeamNameUpdateRequest(BaseModel):
+    team_name: str
 

@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.deps.auth_deps import get_current_user
-from app.schemas.squad_schemas import LineupUpdateRequest, SquadCreateRequest, SquadResponse
+from app.schemas.squad_schemas import (
+    LineupUpdateRequest,
+    SquadCreateRequest,
+    SquadResponse,
+    TeamNameUpdateRequest,
+)
 from app.services import squad_service
 
 router = APIRouter()
@@ -17,6 +22,7 @@ def create_squad(payload: SquadCreateRequest, db: Session = Depends(get_db), use
         league_id=payload.league_id,
         player_ids=payload.player_ids,
         budget_remaining=payload.budget_remaining,
+        team_name=payload.team_name,
     )
     return squad
 
@@ -32,6 +38,12 @@ def update_lineup(
 ):
     return squad_service.update_lineup(db, squad_id=squad_id, payload=payload)
 
+
+@router.put("/{squad_id}/team-name", response_model=SquadResponse)
+def update_team_name(
+    squad_id: str, payload: TeamNameUpdateRequest, db: Session = Depends(get_db), user=Depends(get_current_user)
+):
+    return squad_service.update_team_name(db, squad_id=squad_id, team_name=payload.team_name)
 
 
 @router.post("/{squad_id}/wildcard")
