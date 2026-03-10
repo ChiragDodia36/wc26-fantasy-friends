@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
 
     # API-Football (free, 100 req/day — seeding + post-match stats only)
-    api_football_key: str = Field(default="", alias="API_FOOTBALL_KEY")
+    api_football_key: str = Field(..., alias="API_FOOTBALL_KEY")
     world_cup_league_id: str = Field(default="1", alias="WORLD_CUP_LEAGUE_ID")
     world_cup_season: str = Field(default="2022", alias="WORLD_CUP_SEASON")
 
