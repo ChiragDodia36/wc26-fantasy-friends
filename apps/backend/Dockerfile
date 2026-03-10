@@ -39,7 +39,7 @@ RUN /bin/bash -c '\
     echo "Pulling qwen3:4b..." && \
     ollama pull qwen3:4b || { echo "ERROR: ollama pull qwen3:4b failed"; exit 1; } && \
     echo "Model pulled successfully." && \
-    kill $OLLAMA_PID && \
+    kill $OLLAMA_PID 2>/dev/null; \
     wait $OLLAMA_PID 2>/dev/null || true'
 
 # HuggingFace Spaces requires port 7860
