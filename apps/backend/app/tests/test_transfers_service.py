@@ -13,13 +13,14 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.db import Base
 from app.models.league import League
-from app.models.match import Match
+from app.models.match import Match, MatchStatus
 from app.models.player import Player
-from app.models.round import Round
+from app.models.round import Round, RoundStage, round_matches
 from app.models.squad import Squad
 from app.models.squad_player import SquadPlayer
 from app.models.squad_round_points import SquadRoundPoints
 from app.models.team import Team
+from app.models.transfer_allowance import TransferAllowance
 from app.models.user import User
 
 TEST_DB_URL = "sqlite:///:memory:"
@@ -76,8 +77,12 @@ def _make_league(db, owner):
     return lg
 
 
-def _make_round(db, deadline_offset_hours=48):
-    """Create a round with deadline in the future by default."""
+def _make_round(db, deadline_offset_hours=48, team_a_id=None, team_b_id=None):
+    """Create a round with deadline in the future by default.
+
+    Also creates a scheduled match today (needed for the allowance system).
+    Pass team IDs to link the match to specific teams.
+    """
     now = datetime.utcnow()
     r = Round(
         id=_uid(),
@@ -85,9 +90,24 @@ def _make_round(db, deadline_offset_hours=48):
         start_utc=now - timedelta(hours=1),
         deadline_utc=now + timedelta(hours=deadline_offset_hours),
         end_utc=now + timedelta(days=7),
+        stage=RoundStage.GROUP,
     )
     db.add(r)
     db.flush()
+
+    # Create a match today so the allowance system can find the match date
+    if team_a_id and team_b_id:
+        match = Match(
+            id=_uid(), external_id=_uid()[:8],
+            home_team_id=team_a_id, away_team_id=team_b_id,
+            kickoff_utc=now + timedelta(hours=6),
+            status=MatchStatus.SCHEDULED,
+        )
+        db.add(match)
+        db.flush()
+        db.execute(round_matches.insert().values(round_id=r.id, match_id=match.id))
+        db.flush()
+
     return r
 
 
@@ -193,17 +213,23 @@ def test_transfer_over_budget_raises(db):
 
 
 def test_extra_transfer_applies_4pt_penalty(db):
-    from app.services.transfers_service import make_transfer
+    from app.services.transfers_service import make_transfer, _get_or_create_allowance
 
     user = _make_user(db)
-    team = _make_team(db)
+    team_a = _make_team(db, name="France")
+    team_b = _make_team(db, name="Brazil")
     league = _make_league(db, user)
-    round_ = _make_round(db)
-    squad = _make_squad(db, user, league, budget=50.0, free_transfers=0)  # no free transfers left
+    round_ = _make_round(db, team_a_id=team_a.id, team_b_id=team_b.id)
+    squad = _make_squad(db, user, league, budget=50.0, free_transfers=0)
     srp = _make_srp(db, squad, round_)
 
-    player_out = _make_player(db, team, price=5.0)
-    player_in = _make_player(db, team, price=5.0)
+    # Pre-exhaust the allowance (set free_remaining to 0)
+    allowance = _get_or_create_allowance(db, squad.id, round_)
+    allowance.free_remaining = 0
+    db.flush()
+
+    player_out = _make_player(db, team_a, price=5.0)
+    player_in = _make_player(db, team_a, price=5.0)
     _add_player_to_squad(db, squad, player_out)
     db.commit()
 
@@ -240,22 +266,24 @@ def test_wildcard_active_no_penalty(db):
     assert srp.points == initial_points  # no penalty
 
 
-def test_free_transfer_decrements_count(db):
-    from app.services.transfers_service import make_transfer
+def test_free_transfer_decrements_allowance(db):
+    from app.services.transfers_service import make_transfer, _get_or_create_allowance
 
     user = _make_user(db)
-    team = _make_team(db)
+    team_a = _make_team(db, name="France")
+    team_b = _make_team(db, name="Brazil")
     league = _make_league(db, user)
-    round_ = _make_round(db)
+    round_ = _make_round(db, team_a_id=team_a.id, team_b_id=team_b.id)
     squad = _make_squad(db, user, league, budget=50.0, free_transfers=1)
     _make_srp(db, squad, round_)
 
-    player_out = _make_player(db, team, price=5.0)
-    player_in = _make_player(db, team, price=5.0)
+    player_out = _make_player(db, team_a, price=5.0)
+    player_in = _make_player(db, team_a, price=5.0)
     _add_player_to_squad(db, squad, player_out)
     db.commit()
 
     make_transfer(db, squad_id=squad.id, player_out_id=player_out.id, player_in_id=player_in.id)
 
-    db.refresh(squad)
-    assert squad.free_transfers_remaining == 0
+    # Allowance should decrement from 3 to 2 (not the old squad.free_transfers_remaining)
+    allowance = _get_or_create_allowance(db, squad.id, round_)
+    assert allowance.free_remaining == 2

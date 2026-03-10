@@ -16,6 +16,7 @@ import { Link } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/services/api';
 import { setToken } from '@/services/storage';
+import { Colors } from '@/theme/constants';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -94,7 +95,7 @@ export default function LoginScreen() {
 
         <Pressable style={styles.primaryButton} onPress={handleEmailLogin} disabled={loading}>
           {loading ? (
-            <ActivityIndicator color="#0A0E1A" />
+            <ActivityIndicator color={Colors.bg} />
           ) : (
             <Text style={styles.primaryButtonText}>Sign In</Text>
           )}
@@ -117,14 +118,12 @@ export default function LoginScreen() {
   );
 }
 
-const GOLD = '#FFD700';
-const NAVY = '#0A0E1A';
 const INPUT_BG = '#1E2333';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: NAVY,
+    backgroundColor: Colors.bg,
     justifyContent: 'center',
     padding: 24,
   },
@@ -139,7 +138,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: GOLD,
+    color: Colors.accent,
     letterSpacing: 1,
   },
   subtitle: {
@@ -160,14 +159,14 @@ const styles = StyleSheet.create({
     borderColor: '#2E3550',
   },
   primaryButton: {
-    backgroundColor: GOLD,
+    backgroundColor: Colors.accent,
     borderRadius: 10,
     padding: 16,
     alignItems: 'center',
     marginTop: 4,
   },
   primaryButtonText: {
-    color: NAVY,
+    color: Colors.bg,
     fontSize: 16,
     fontWeight: 'bold',
   },

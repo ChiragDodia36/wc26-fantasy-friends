@@ -6,6 +6,7 @@ from app.deps.auth_deps import get_current_user
 from app.schemas.squad_schemas import (
     LineupUpdateRequest,
     SquadCreateRequest,
+    SquadPlayersUpdateRequest,
     SquadResponse,
     TeamNameUpdateRequest,
 )
@@ -37,6 +38,16 @@ def update_lineup(
     squad_id: str, payload: LineupUpdateRequest, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
     return squad_service.update_lineup(db, squad_id=squad_id, payload=payload)
+
+
+@router.put("/{squad_id}/players", response_model=SquadResponse)
+def update_squad_players(
+    squad_id: str, payload: SquadPlayersUpdateRequest, db: Session = Depends(get_db), user=Depends(get_current_user)
+):
+    """Replace all players in the squad (pre-tournament unlimited editing)."""
+    return squad_service.replace_squad_players(
+        db, squad_id=squad_id, player_ids=payload.player_ids, budget_remaining=payload.budget_remaining
+    )
 
 
 @router.put("/{squad_id}/team-name", response_model=SquadResponse)

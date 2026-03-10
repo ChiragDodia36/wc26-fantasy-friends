@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useLeagueStore } from '@/store/leagueStore';
 import type { League } from '@/types/api';
+import { Colors } from '@/theme/constants';
 
 export default function LeaguesScreen() {
   const { leagues, loading, error, fetchLeagues, createLeague, joinLeague } = useLeagueStore();
@@ -80,7 +81,7 @@ export default function LeaguesScreen() {
       </View>
 
       {loading && leagues.length === 0 ? (
-        <View style={styles.center}><ActivityIndicator color="#FFD700" size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={Colors.accent} size="large" /></View>
       ) : leagues.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>No leagues yet</Text>
@@ -91,7 +92,7 @@ export default function LeaguesScreen() {
           data={leagues}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchLeagues} tintColor="#FFD700" />}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={fetchLeagues} tintColor={Colors.accent} />}
           renderItem={renderLeague}
         />
       )}
@@ -109,7 +110,7 @@ export default function LeaguesScreen() {
               onChangeText={setLeagueName}
             />
             <Pressable style={styles.modalConfirm} onPress={handleCreate} disabled={processing}>
-              {processing ? <ActivityIndicator color="#0A0E1A" /> : <Text style={styles.modalConfirmText}>Create</Text>}
+              {processing ? <ActivityIndicator color={Colors.bg} /> : <Text style={styles.modalConfirmText}>Create</Text>}
             </Pressable>
             <Pressable style={styles.modalCancel} onPress={() => setShowCreateModal(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
@@ -132,7 +133,7 @@ export default function LeaguesScreen() {
               autoCapitalize="characters"
             />
             <Pressable style={styles.modalConfirm} onPress={handleJoin} disabled={processing}>
-              {processing ? <ActivityIndicator color="#0A0E1A" /> : <Text style={styles.modalConfirmText}>Join</Text>}
+              {processing ? <ActivityIndicator color={Colors.bg} /> : <Text style={styles.modalConfirmText}>Join</Text>}
             </Pressable>
             <Pressable style={styles.modalCancel} onPress={() => setShowJoinModal(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
@@ -145,13 +146,13 @@ export default function LeaguesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1A' },
+  container: { flex: 1, backgroundColor: Colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   buttonRow: { flexDirection: 'row', gap: 10, padding: 16 },
-  actionBtn: { flex: 1, backgroundColor: '#FFD700', borderRadius: 10, padding: 12, alignItems: 'center' },
-  actionBtnSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#FFD700' },
-  actionBtnText: { color: '#0A0E1A', fontWeight: 'bold', fontSize: 14 },
-  actionBtnSecondaryText: { color: '#FFD700' },
+  actionBtn: { flex: 1, backgroundColor: Colors.accent, borderRadius: 10, padding: 12, alignItems: 'center' },
+  actionBtnSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.accent },
+  actionBtnText: { color: Colors.bg, fontWeight: 'bold', fontSize: 14 },
+  actionBtnSecondaryText: { color: Colors.accent },
   list: { padding: 16, gap: 10 },
   leagueCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#141824', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#2E3550' },
   leagueCardLeft: { flex: 1 },
@@ -161,10 +162,10 @@ const styles = StyleSheet.create({
   emptySubtext: { fontSize: 14, color: '#8888AA', textAlign: 'center' },
   modal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24 },
   modalCard: { backgroundColor: '#141824', borderRadius: 16, padding: 24, gap: 12 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFD700' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: Colors.accent },
   modalInput: { backgroundColor: '#1E2333', borderRadius: 10, padding: 14, fontSize: 16, color: '#FFFFFF', borderWidth: 1, borderColor: '#2E3550' },
-  modalConfirm: { backgroundColor: '#FFD700', borderRadius: 10, padding: 14, alignItems: 'center' },
-  modalConfirmText: { color: '#0A0E1A', fontWeight: 'bold', fontSize: 16 },
+  modalConfirm: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
+  modalConfirmText: { color: Colors.bg, fontWeight: 'bold', fontSize: 16 },
   modalCancel: { padding: 12, alignItems: 'center' },
   modalCancelText: { color: '#8888AA', fontSize: 15 },
 });

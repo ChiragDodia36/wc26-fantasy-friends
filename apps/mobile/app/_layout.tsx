@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { getToken, clearToken } from '@/services/storage';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/services/api';
+import { Colors } from '@/theme/constants';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -55,10 +56,10 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: '#0A0E1A' },
-          headerTintColor: '#FFD700',
+          headerStyle: { backgroundColor: Colors.bg },
+          headerTintColor: Colors.accent,
           headerTitleStyle: { fontWeight: 'bold' },
-          contentStyle: { backgroundColor: '#0A0E1A' },
+          contentStyle: { backgroundColor: Colors.bg },
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

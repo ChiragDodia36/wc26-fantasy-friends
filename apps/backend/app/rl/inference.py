@@ -179,10 +179,14 @@ def suggest_lineup_rl(db: Session, squad_player_ids: list[str]) -> dict:
     captain_id = starting[0] if starting else None
     vice_captain_id = starting[1] if len(starting) > 1 else None
 
+    captain_name = player_map[captain_id].name if captain_id and captain_id in player_map else "N/A"
+    vc_name = player_map[vice_captain_id].name if vice_captain_id and vice_captain_id in player_map else "N/A"
+
     return {
         "starting": starting,
         "bench": bench,
         "captain_id": captain_id,
         "vice_captain_id": vice_captain_id,
-        "explanation": f"Lineup optimized by player form. Captain: {captain_id}.",
+        "explanation": f"Lineup optimized by player form and fixture difficulty. "
+                       f"Captain: {captain_name}, Vice Captain: {vc_name}.",
     }

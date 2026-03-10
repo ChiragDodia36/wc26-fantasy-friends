@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import type { Player } from '@/types/api';
+import { Colors } from '@/theme/constants';
 
 interface PlayerPickerProps {
   players: Player[];
@@ -23,7 +24,7 @@ interface PlayerPickerProps {
 
 const POSITIONS = ['ALL', 'GK', 'DEF', 'MID', 'FWD'];
 const POSITION_COLOR: Record<string, string> = {
-  GK: '#FFD700', DEF: '#4FC3F7', MID: '#81C784', FWD: '#EF9A9A',
+  GK: Colors.posGK, DEF: Colors.posDEF, MID: Colors.posMID, FWD: Colors.posFWD,
 };
 
 export function PlayerPicker({ players, selectedIds, onSelect, disabled }: PlayerPickerProps) {
@@ -122,9 +123,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2E3550',
   },
-  filterBtnActive: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  filterBtnActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   filterText: { color: '#AAAACC', fontSize: 13, fontWeight: '600' },
-  filterTextActive: { color: '#0A0E1A' },
+  filterTextActive: { color: Colors.bg },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -143,10 +144,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  posText: { fontSize: 10, fontWeight: 'bold', color: '#0A0E1A' },
+  posText: { fontSize: 10, fontWeight: 'bold', color: Colors.bg },
   info: { flex: 1 },
   name: { fontSize: 15, color: '#FFFFFF', fontWeight: '600' },
   nameDisabled: { color: '#555577' },
   price: { fontSize: 12, color: '#8888AA', marginTop: 2 },
-  checkmark: { color: '#FFD700', fontSize: 18, fontWeight: 'bold' },
+  checkmark: { color: Colors.accent, fontSize: 18, fontWeight: 'bold' },
 });

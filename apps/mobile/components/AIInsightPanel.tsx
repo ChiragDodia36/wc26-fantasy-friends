@@ -3,6 +3,7 @@
  * Used in squad/transfer screens to surface AI-suggested picks.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Colors } from '@/theme/constants';
 
 interface AIInsightPanelProps {
   playerName: string;
@@ -14,11 +15,11 @@ interface AIInsightPanelProps {
 }
 
 const POSITION_COLOR: Record<string, string> = {
-  GK: '#FFD700', DEF: '#4FC3F7', MID: '#81C784', FWD: '#EF9A9A',
+  GK: Colors.posGK, DEF: Colors.posDEF, MID: Colors.posMID, FWD: Colors.posFWD,
 };
 
 function ScoreBar({ score }: { score: number }) {
-  const color = score >= 70 ? '#81C784' : score >= 40 ? '#FFD700' : '#EF9A9A';
+  const color = score >= 70 ? Colors.lime : score >= 40 ? Colors.gold : Colors.pink;
   return (
     <View style={styles.scoreBarBg}>
       <View style={[styles.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  posText: { fontSize: 11, fontWeight: 'bold', color: '#0A0E1A' },
+  posText: { fontSize: 11, fontWeight: 'bold', color: Colors.bg },
   headerRight: { flex: 1 },
   name: { fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' },
   price: { fontSize: 12, color: '#8888AA' },
@@ -92,10 +93,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   scoreLabel: { fontSize: 9, color: '#8888AA', textTransform: 'uppercase' },
-  scoreValue: { fontSize: 18, fontWeight: 'bold', color: '#FFD700' },
+  scoreValue: { fontSize: 18, fontWeight: 'bold', color: Colors.accent },
   scoreBarBg: { height: 4, backgroundColor: '#2E3550', borderRadius: 2 },
   scoreBarFill: { height: 4, borderRadius: 2 },
   reasoning: { fontSize: 12, color: '#AAAACC', lineHeight: 17 },
   viewBtn: { alignSelf: 'flex-start' },
-  viewBtnText: { color: '#FFD700', fontSize: 13, fontWeight: '600' },
+  viewBtnText: { color: Colors.accent, fontSize: 13, fontWeight: '600' },
 });

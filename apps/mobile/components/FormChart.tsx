@@ -4,6 +4,7 @@
  * Falls back to a simple bar visualization if victory is unavailable.
  */
 import { StyleSheet, Text, View } from 'react-native';
+import { Colors } from '@/theme/constants';
 
 interface FormChartProps {
   points: number[];
@@ -30,7 +31,7 @@ export function FormChart({ points, label }: FormChartProps) {
       <View style={styles.bars}>
         {points.map((p, i) => {
           const height = Math.max(4, (p / maxP) * BAR_MAX_HEIGHT);
-          const color = p >= 8 ? '#81C784' : p >= 4 ? '#FFD700' : '#EF9A9A';
+          const color = p >= 8 ? Colors.lime : p >= 4 ? Colors.gold : Colors.pink;
           return (
             <View key={i} style={styles.barCol}>
               <Text style={styles.barPts}>{p}</Text>

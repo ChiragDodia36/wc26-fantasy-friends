@@ -18,6 +18,7 @@ import {
 import api from '@/services/api';
 import { useSquadStore } from '@/store/squadStore';
 import type { Player } from '@/types/api';
+import { Colors } from '@/theme/constants';
 
 const DEFAULT_LEAGUE_ID = 'default';
 const BUDGET = 100;
@@ -25,14 +26,14 @@ const MAX_PER_TEAM = 2;
 const LIMITS: Record<string, number> = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
 const POSITION_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
 const POSITION_COLOR: Record<string, string> = {
-  GK: '#FFD700', DEF: '#4FC3F7', MID: '#81C784', FWD: '#EF9A9A',
+  GK: Colors.posGK, DEF: Colors.posDEF, MID: Colors.posMID, FWD: Colors.posFWD,
 };
 const POSITION_LABEL: Record<string, string> = {
   GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards',
 };
 
 export default function EditSquadScreen() {
-  const { players, loading, fetchSquad } = useSquadStore();
+  const { squad, players, loading, fetchSquad } = useSquadStore();
   const [selected, setSelected] = useState<Player[]>([]);
   const [search, setSearch] = useState('');
   const [posFilter, setPosFilter] = useState<string>('ALL');
@@ -41,6 +42,15 @@ export default function EditSquadScreen() {
   useEffect(() => {
     fetchSquad(DEFAULT_LEAGUE_ID);
   }, []);
+
+  // Pre-populate selected players from existing squad
+  useEffect(() => {
+    if (squad && players.length > 0 && selected.length === 0) {
+      const squadPlayerIds = new Set(squad.players.map((sp) => sp.player_id));
+      const existing = players.filter((p) => squadPlayerIds.has(p.id));
+      if (existing.length > 0) setSelected(existing);
+    }
+  }, [squad, players]);
 
   const spent = selected.reduce((sum, p) => sum + Number(p.price), 0);
   const remaining = BUDGET - spent;
@@ -90,13 +100,24 @@ export default function EditSquadScreen() {
     }
     setSaving(true);
     try {
-      await api.post('/squads', {
-        league_id: DEFAULT_LEAGUE_ID,
-        player_ids: selected.map((p) => p.id),
-        budget_remaining: remaining,
-      });
-      await fetchSquad(DEFAULT_LEAGUE_ID);
-      Alert.alert('Squad saved!', 'Your squad has been created.');
+      if (squad) {
+        // Update existing squad
+        await api.put(`/squads/${squad.id}/players`, {
+          player_ids: selected.map((p) => p.id),
+          budget_remaining: remaining,
+        });
+        await fetchSquad(DEFAULT_LEAGUE_ID);
+        Alert.alert('Squad updated!', 'Your changes have been saved.');
+      } else {
+        // Create new squad
+        await api.post('/squads', {
+          league_id: DEFAULT_LEAGUE_ID,
+          player_ids: selected.map((p) => p.id),
+          budget_remaining: remaining,
+        });
+        await fetchSquad(DEFAULT_LEAGUE_ID);
+        Alert.alert('Squad saved!', 'Your squad has been created.');
+      }
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.detail ?? 'Failed to save squad');
     } finally {
@@ -168,12 +189,12 @@ export default function EditSquadScreen() {
       />
 
       {loading ? (
-        <ActivityIndicator color="#FFD700" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={Colors.accent} style={{ marginTop: 40 }} />
       ) : (
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 160 }}
           stickySectionHeadersEnabled
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
@@ -205,7 +226,7 @@ export default function EditSquadScreen() {
                   isSelected && styles.toggleBtnSelected,
                   !addable && !isSelected && styles.toggleBtnDisabled,
                 ]}>
-                  <Text style={[styles.toggleBtnText, isSelected && { color: '#0A0E1A' }]}>
+                  <Text style={[styles.toggleBtnText, isSelected && { color: Colors.bg }]}>
                     {isSelected ? '✓' : '+'}
                   </Text>
                 </View>
@@ -217,9 +238,9 @@ export default function EditSquadScreen() {
 
       <Pressable style={styles.saveBtn} onPress={handleSave} disabled={saving}>
         {saving ? (
-          <ActivityIndicator color="#0A0E1A" />
+          <ActivityIndicator color={Colors.bg} />
         ) : (
-          <Text style={styles.saveBtnText}>Save Squad ({selected.length}/15)</Text>
+          <Text style={styles.saveBtnText}>{squad ? 'Update' : 'Save'} Squad ({selected.length}/15)</Text>
         )}
       </Pressable>
     </View>
@@ -227,7 +248,7 @@ export default function EditSquadScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1A' },
+  container: { flex: 1, backgroundColor: Colors.bg },
   budgetBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -238,12 +259,12 @@ const styles = StyleSheet.create({
   },
   budgetLeft: { marginRight: 4 },
   budgetLabel: { fontSize: 11, color: '#8888AA' },
-  budgetValue: { fontSize: 18, fontWeight: 'bold', color: '#FFD700' },
+  budgetValue: { fontSize: 18, fontWeight: 'bold', color: Colors.accent },
   posCountRow: { flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center' },
   posCountItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   posCountDot: { width: 8, height: 8, borderRadius: 4 },
   posCountText: { fontSize: 12, color: '#AAAACC', fontWeight: '600' },
-  countLabel: { fontSize: 14, color: '#FFD700', fontWeight: 'bold' },
+  countLabel: { fontSize: 14, color: Colors.accent, fontWeight: 'bold' },
   filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   filterBtn: {
     paddingHorizontal: 14,
@@ -252,9 +273,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2E3550',
   },
-  filterBtnActive: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  filterBtnActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   filterText: { color: '#AAAACC', fontSize: 13, fontWeight: '600' },
-  filterTextActive: { color: '#0A0E1A' },
+  filterTextActive: { color: Colors.bg },
   searchInput: {
     backgroundColor: '#1E2333',
     borderRadius: 10,
@@ -272,7 +293,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingTop: 14,
     gap: 8,
-    backgroundColor: '#0A0E1A',
+    backgroundColor: Colors.bg,
   },
   sectionDot: { width: 10, height: 10, borderRadius: 5 },
   sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', flex: 1 },
@@ -287,7 +308,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1E2333',
   },
-  playerRowSelected: { borderColor: '#FFD700' },
+  playerRowSelected: { borderColor: Colors.accent },
   playerInfo: { flex: 1 },
   playerName: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
   playerSub: { fontSize: 12, color: '#8888AA', marginTop: 1 },
@@ -296,23 +317,28 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#FFD700',
+    borderColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  toggleBtnSelected: { backgroundColor: '#FFD700' },
+  toggleBtnSelected: { backgroundColor: Colors.accent },
   toggleBtnDisabled: { borderColor: '#444466' },
-  toggleBtnText: { color: '#FFD700', fontSize: 16, fontWeight: 'bold' },
+  toggleBtnText: { color: Colors.accent, fontSize: 16, fontWeight: 'bold' },
   saveBtn: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 90,
     left: 0,
     right: 0,
-    backgroundColor: '#FFD700',
-    margin: 16,
+    backgroundColor: Colors.accent,
+    marginHorizontal: 16,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  saveBtnText: { color: '#0A0E1A', fontSize: 16, fontWeight: 'bold' },
+  saveBtnText: { color: Colors.bg, fontSize: 16, fontWeight: 'bold' },
 });

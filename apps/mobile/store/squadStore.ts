@@ -4,18 +4,20 @@
  */
 import { create } from 'zustand';
 import api from '@/services/api';
-import type { Squad, Player, Round, SquadPlayer } from '@/types/api';
+import type { Squad, Player, Round, SquadPlayer, TransferAllowance } from '@/types/api';
 
 interface SquadState {
   squad: Squad | null;
   players: Player[];
   currentRound: Round | null;
   leagueId: string | null;
+  transferAllowance: TransferAllowance | null;
   loading: boolean;
   error: string | null;
 
   fetchSquad: (leagueId: string) => Promise<void>;
   fetchCurrentRound: () => Promise<void>;
+  fetchTransferAllowance: () => Promise<void>;
   makeTransfer: (playerOutId: string, playerInId: string) => Promise<void>;
   activateWildcard: () => Promise<void>;
   setCaptain: (playerId: string) => Promise<void>;
@@ -30,6 +32,7 @@ export const useSquadStore = create<SquadState>((set, get) => ({
   players: [],
   currentRound: null,
   leagueId: null,
+  transferAllowance: null,
   loading: false,
   error: null,
 
@@ -53,6 +56,19 @@ export const useSquadStore = create<SquadState>((set, get) => ({
     } catch {
       // No active round — tournament hasn't started yet
       set({ currentRound: null });
+    }
+  },
+
+  fetchTransferAllowance: async () => {
+    const { squad } = get();
+    if (!squad) return;
+    try {
+      const res = await api.get<TransferAllowance>(
+        `/transfers/allowance?squad_id=${squad.id}`,
+      );
+      set({ transferAllowance: res.data });
+    } catch {
+      set({ transferAllowance: null });
     }
   },
 

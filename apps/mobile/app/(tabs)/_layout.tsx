@@ -1,14 +1,30 @@
 /**
- * Bottom tab navigator — 5 main sections.
- * Deep navy theme with gold active tints.
+ * Bottom tab navigator — 6 main sections.
+ * Frosted glass tab bar with gold active indicator.
  */
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Colors } from '@/theme/constants';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
-  return <Ionicons name={name} size={24} color={focused ? '#FFD700' : '#555577'} />;
+  return (
+    <View style={styles.iconWrap}>
+      <Ionicons name={name} size={22} color={focused ? Colors.accent : Colors.textDim} />
+      {focused && <View style={styles.activeDot} />}
+    </View>
+  );
+}
+
+function TabBarBackground() {
+  return (
+    <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill}>
+      <View style={styles.tabBarOverlay} />
+    </BlurView>
+  );
 }
 
 export default function TabsLayout() {
@@ -16,14 +32,20 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: '#0D1120',
-          borderTopColor: '#1E2333',
-          borderTopWidth: 1,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopColor: 'rgba(255,255,255,0.06)',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: 88,
+          paddingBottom: 28,
+          elevation: 0,
         },
-        tabBarActiveTintColor: '#FFD700',
-        tabBarInactiveTintColor: '#555577',
-        headerStyle: { backgroundColor: '#0A0E1A' },
-        headerTintColor: '#FFD700',
+        tabBarBackground: () => <TabBarBackground />,
+        tabBarActiveTintColor: Colors.accent,
+        tabBarInactiveTintColor: Colors.textDim,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: -2 },
+        headerStyle: { backgroundColor: Colors.bg },
+        headerTintColor: Colors.accent,
         headerTitleStyle: { fontWeight: 'bold' },
       }}
     >
@@ -50,6 +72,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="my-squad"
+        options={{
+          title: 'My XI',
+          headerShown: false,
+          tabBarIcon: ({ focused }) => <TabIcon name="shirt-outline" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="leagues"
         options={{
           title: 'Leagues',
@@ -63,9 +93,27 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="ellipsis-horizontal" focused={focused} />,
         }}
       />
-      {/* Hidden screens — accessible via deep links, not visible in tab bar */}
-      <Tabs.Screen name="players" options={{ href: null }} />
+      {/* Hidden — accessible via More → AI Coach, not shown in tab bar */}
       <Tabs.Screen name="ai" options={{ href: null }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 6,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.accent,
+    marginTop: 4,
+  },
+  tabBarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11,13,31,0.88)',
+  },
+});

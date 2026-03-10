@@ -2,11 +2,18 @@
 AI Coach service — orchestrates the RL executor, ToT planner, and
 episodic memory to provide squad, lineup, transfer, and Q&A recommendations.
 """
-from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session, joinedload
 
 from app.integrations.memory_client import query_lessons
 from app.integrations.planner import answer_question, generate_tot_branches
+from app.models.match import Match, MatchStatus
 from app.models.player import Player
+from app.models.player_match_stats import PlayerMatchStats
+from app.models.squad import Squad
+from app.models.squad_player import SquadPlayer
 from app.rl.inference import suggest_lineup_rl, suggest_squad_rl
 from app.schemas.ai_schemas import (
     LineupRequest,
@@ -14,6 +21,8 @@ from app.schemas.ai_schemas import (
     SquadBuilderRequest,
     TransferSuggestionRequest,
 )
+from app.services.fdr_service import get_upcoming_fdr
+from app.services.transfers_service import _current_round, _get_or_create_allowance
 
 
 def _build_player_context(db: Session, limit: int = 50) -> str:
@@ -55,8 +64,7 @@ async def suggest_squad(db: Session, payload: SquadBuilderRequest):
 async def suggest_lineup(db: Session, payload: LineupRequest):
     """Suggest a starting XI from an existing squad."""
     # Get squad player IDs
-    from app.models.squad import Squad
-    squad = db.query(Squad).filter(
+    squad = db.query(Squad).options(joinedload(Squad.players)).filter(
         Squad.id == payload.squad_id,
     ).first()
 
@@ -64,12 +72,7 @@ async def suggest_lineup(db: Session, payload: LineupRequest):
         return {"explanation": "Squad not found.", "data": None}
 
     player_ids = [sp.player_id for sp in squad.players]
-    result = suggest_lineup_rl(db, player_ids)
-
-    return {
-        "explanation": result.get("explanation", "Lineup optimized."),
-        "data": result,
-    }
+    return suggest_lineup_rl(db, player_ids)
 
 
 async def suggest_transfers(db: Session, payload: TransferSuggestionRequest):
@@ -97,3 +100,141 @@ async def answer_rules(payload: QARequest):
     """Answer a rules or strategy question."""
     answer = await answer_question(payload.question)
     return answer
+
+
+# ---------------------------------------------------------------------------
+# Transfer context — structured data for on-device LLM inference
+# ---------------------------------------------------------------------------
+
+def _compute_form(db: Session, player_id: str, n_matches: int = 5) -> list[int]:
+    """Return the last N match fantasy point scores for a player."""
+    stats = (
+        db.query(PlayerMatchStats)
+        .join(Match, PlayerMatchStats.match_id == Match.id)
+        .filter(
+            PlayerMatchStats.player_id == player_id,
+            Match.status == MatchStatus.FINISHED,
+        )
+        .order_by(Match.kickoff_utc.desc())
+        .limit(n_matches)
+        .all()
+    )
+    return [s.fantasy_points or 0 for s in stats]
+
+
+def build_transfer_context(db: Session, squad_id: str) -> dict:
+    """Assemble all structured data the on-device model needs for transfer
+    suggestions. No AI reasoning happens here — just data preparation.
+
+    Returns squad players, upcoming matches, candidate players (only from
+    teams playing in the next 48 hours), form, FDR, and transfer allowance.
+    """
+    squad = db.get(Squad, squad_id)
+    if not squad:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Squad not found"
+        )
+
+    # 1. Current squad players with form + FDR
+    squad_players = []
+    for sp in squad.players:
+        player = db.get(Player, sp.player_id)
+        if not player:
+            continue
+        form = _compute_form(db, player.id)
+        fdr = get_upcoming_fdr(player.id, db)
+        team_name = player.team.name if player.team else None
+        squad_players.append({
+            "player_id": player.id,
+            "name": player.name,
+            "position": player.position,
+            "price": float(player.price),
+            "team_id": player.team_id,
+            "team_name": team_name,
+            "is_starting": sp.is_starting,
+            "is_captain": sp.is_captain,
+            "form_last_5": form,
+            "avg_form": round(sum(form) / len(form), 1) if form else 0.0,
+            "upcoming_fdr": fdr,
+        })
+
+    # 2. Upcoming matches (next 48 hours)
+    now = datetime.utcnow()
+    cutoff = now + timedelta(hours=48)
+    upcoming = (
+        db.query(Match)
+        .filter(
+            Match.status == MatchStatus.SCHEDULED,
+            Match.kickoff_utc >= now,
+            Match.kickoff_utc <= cutoff,
+        )
+        .order_by(Match.kickoff_utc.asc())
+        .all()
+    )
+
+    playing_team_ids: set[str] = set()
+    match_info = []
+    for m in upcoming:
+        playing_team_ids.update([m.home_team_id, m.away_team_id])
+        match_info.append({
+            "match_id": m.id,
+            "home_team_id": m.home_team_id,
+            "away_team_id": m.away_team_id,
+            "home_team_name": m.home_team.name if m.home_team else "",
+            "away_team_name": m.away_team.name if m.away_team else "",
+            "kickoff_utc": m.kickoff_utc.isoformat(),
+            "venue": m.venue,
+        })
+
+    # 3. Candidate players — only from teams playing next 48h, not in squad
+    squad_player_ids = {sp["player_id"] for sp in squad_players}
+    candidates = []
+    if playing_team_ids:
+        candidate_rows = (
+            db.query(Player)
+            .filter(
+                Player.team_id.in_(playing_team_ids),
+                Player.is_active == True,  # noqa: E712
+                ~Player.id.in_(squad_player_ids),
+            )
+            .all()
+        )
+        for p in candidate_rows:
+            form = _compute_form(db, p.id)
+            fdr = get_upcoming_fdr(p.id, db)
+            candidates.append({
+                "player_id": p.id,
+                "name": p.name,
+                "position": p.position,
+                "price": float(p.price),
+                "team_id": p.team_id,
+                "team_name": p.team.name if p.team else None,
+                "form_last_5": form,
+                "avg_form": round(sum(form) / len(form), 1) if form else 0.0,
+                "upcoming_fdr": fdr,
+            })
+
+    # 4. Transfer allowance
+    round_ = _current_round(db)
+    free_remaining = 3
+    if round_:
+        allowance = _get_or_create_allowance(db, squad_id, round_)
+        free_remaining = allowance.free_remaining
+
+    # 5. Past lessons from episodic memory
+    lessons = query_lessons(
+        "transfer strategy upcoming fixtures",
+        n_results=3,
+        decision_type="transfer",
+    )
+
+    return {
+        "squad_id": squad_id,
+        "budget_remaining": float(squad.budget_remaining),
+        "free_transfers_remaining": free_remaining,
+        "squad_players": squad_players,
+        "upcoming_matches": match_info,
+        "candidate_players": candidates,
+        "max_transfers": 3,
+        "past_lessons": [l["lesson"] for l in lessons] if lessons else [],
+    }

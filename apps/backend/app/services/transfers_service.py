@@ -4,21 +4,26 @@ transfers_service.py
 Rules enforced:
 - Transfer deadline: Round.deadline_utc blocks all transfers
 - Budget: squad.budget_remaining + player_out.price - player_in.price >= 0
-- Free transfers: 1 per round (Squad.free_transfers_remaining)
-  * If 0 remaining and wildcard not active → deduct 4 pts immediately
-  * If wildcard active for this round → unlimited, no penalty
+- Free transfers:
+  * Group stage: 3 free per match day (each calendar date with matches)
+  * Knockouts (R16+): 2 free per round
+  * Extra transfers beyond the limit → deduct 4 pts immediately
+  * Wildcard active → unlimited, no penalty
 - Wildcard: Squad.wildcard_active_round_id matches current round
 """
 from datetime import datetime
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.match import Match, MatchStatus
 from app.models.player import Player
-from app.models.round import Round
+from app.models.round import Round, RoundStage
 from app.models.squad import Squad
 from app.models.squad_player import SquadPlayer
 from app.models.squad_round_points import SquadRoundPoints
+from app.models.transfer_allowance import TransferAllowance
 
 
 def _current_round(db: Session) -> Round | None:
@@ -28,6 +33,85 @@ def _current_round(db: Session) -> Round | None:
         .filter(Round.start_utc <= now, Round.end_utc >= now)
         .first()
     )
+
+
+def _get_transfer_match_date(round_: Round, db: Session):
+    """Determine which match date governs the transfer allowance.
+
+    Group stage: today's date if matches exist today, else the next match date.
+    Knockouts: round start date (single allowance for the whole round).
+    """
+    if round_.stage == RoundStage.GROUP:
+        today = datetime.utcnow().date()
+        has_matches_today = (
+            db.query(Match)
+            .filter(
+                Match.rounds.any(Round.id == round_.id),
+                func.date(Match.kickoff_utc) == today,
+                Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]),
+            )
+            .first()
+        )
+        if has_matches_today:
+            return today
+        # Fall back to next upcoming match date in this round
+        next_match = (
+            db.query(Match)
+            .filter(
+                Match.rounds.any(Round.id == round_.id),
+                Match.kickoff_utc > datetime.utcnow(),
+            )
+            .order_by(Match.kickoff_utc.asc())
+            .first()
+        )
+        return next_match.kickoff_utc.date() if next_match else today
+    else:
+        return round_.start_utc.date()
+
+
+def _get_or_create_allowance(
+    db: Session, squad_id: str, round_: Round
+) -> TransferAllowance:
+    """Lazy-create a TransferAllowance row for the relevant match date."""
+    match_date = _get_transfer_match_date(round_, db)
+    allowance = (
+        db.query(TransferAllowance)
+        .filter_by(squad_id=squad_id, round_id=round_.id, match_date=match_date)
+        .first()
+    )
+    if not allowance:
+        # Group stage: 3 free per match day; Knockouts: 2 free per round
+        default_free = 3 if round_.stage == RoundStage.GROUP else 2
+        allowance = TransferAllowance(
+            squad_id=squad_id,
+            round_id=round_.id,
+            match_date=match_date,
+            free_remaining=default_free,
+        )
+        db.add(allowance)
+        db.flush()
+    return allowance
+
+
+def get_transfer_allowance(db: Session, squad_id: str) -> dict:
+    """Return the current transfer allowance info for a squad."""
+    round_ = _current_round(db)
+    if not round_:
+        return {
+            "free_remaining": 3,  # default to group stage allowance
+            "stage": "GROUP",
+            "match_date": None,
+            "is_knockout": False,
+            "round_name": None,
+        }
+    allowance = _get_or_create_allowance(db, squad_id, round_)
+    return {
+        "free_remaining": allowance.free_remaining,
+        "stage": round_.stage.value,
+        "match_date": str(allowance.match_date),
+        "is_knockout": round_.stage != RoundStage.GROUP,
+        "round_name": round_.name,
+    }
 
 
 def make_transfer(
@@ -78,22 +162,22 @@ def make_transfer(
         and squad.wildcard_active_round_id == round_.id
     )
 
-    if not wildcard_active:
-        if squad.free_transfers_remaining > 0:
-            squad.free_transfers_remaining -= 1
+    if not wildcard_active and round_:
+        allowance = _get_or_create_allowance(db, squad_id, round_)
+        if allowance.free_remaining > 0:
+            allowance.free_remaining -= 1
         else:
             # -4 pt penalty, applied immediately
-            if round_:
-                srp = (
-                    db.query(SquadRoundPoints)
-                    .filter(
-                        SquadRoundPoints.squad_id == squad_id,
-                        SquadRoundPoints.round_id == round_.id,
-                    )
-                    .first()
+            srp = (
+                db.query(SquadRoundPoints)
+                .filter(
+                    SquadRoundPoints.squad_id == squad_id,
+                    SquadRoundPoints.round_id == round_.id,
                 )
-                if srp:
-                    srp.points = (srp.points or 0) - 4
+                .first()
+            )
+            if srp:
+                srp.points = (srp.points or 0) - 4
 
     # ── Execute transfer ──────────────────────────────────────────────────────
     db.query(SquadPlayer).filter(

@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/services/api';
 import { setToken } from '@/services/storage';
+import { Colors } from '@/theme/constants';
 
 export default function SignupScreen() {
   const [username, setUsername] = useState('');
@@ -95,7 +96,7 @@ export default function SignupScreen() {
 
         <Pressable style={styles.button} onPress={handleSignUp} disabled={loading}>
           {loading ? (
-            <ActivityIndicator color="#0A0E1A" />
+            <ActivityIndicator color={Colors.bg} />
           ) : (
             <Text style={styles.buttonText}>Create Account</Text>
           )}
@@ -112,14 +113,14 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E1A',
+    backgroundColor: Colors.bg,
     padding: 24,
     justifyContent: 'center',
   },
   heading: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: Colors.accent,
     marginBottom: 8,
   },
   sub: {
@@ -140,14 +141,14 @@ const styles = StyleSheet.create({
     borderColor: '#2E3550',
   },
   button: {
-    backgroundColor: '#FFD700',
+    backgroundColor: Colors.accent,
     borderRadius: 10,
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
   },
   buttonText: {
-    color: '#0A0E1A',
+    color: Colors.bg,
     fontSize: 16,
     fontWeight: 'bold',
   },

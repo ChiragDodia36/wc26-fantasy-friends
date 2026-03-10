@@ -3,7 +3,8 @@ from app.models.league import League, league_memberships
 from app.models.match import Match, MatchStatus
 from app.models.player import Player
 from app.models.player_match_stats import PlayerMatchStats
-from app.models.round import Round, round_matches
+from app.models.round import Round, RoundStage, round_matches
+from app.models.transfer_allowance import TransferAllowance
 from app.models.squad import Squad
 from app.models.squad_player import SquadPlayer
 from app.models.squad_round_points import SquadRoundPoints
@@ -19,7 +20,9 @@ __all__ = [
     "Player",
     "PlayerMatchStats",
     "Round",
+    "RoundStage",
     "round_matches",
+    "TransferAllowance",
     "Squad",
     "SquadPlayer",
     "SquadRoundPoints",

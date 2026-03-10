@@ -7,6 +7,7 @@
  */
 import Svg, { Circle, Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Colors, POS_COLORS } from '@/theme/constants';
 
 export interface PitchPlayer {
   id: string;
@@ -46,10 +47,10 @@ const POSITION_Y: Record<string, number> = {
 };
 
 const POSITION_COLOR: Record<string, string> = {
-  GK: '#FFD700',
-  DEF: '#4FC3F7',
-  MID: '#81C784',
-  FWD: '#EF9A9A',
+  GK: Colors.posGK,
+  DEF: Colors.posDEF,
+  MID: Colors.posMID,
+  FWD: Colors.posFWD,
 };
 
 const TOKEN_SIZE = 42;
@@ -100,14 +101,14 @@ export function PitchView({
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id="pitchGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#1A4A1A" />
-            <Stop offset="0.5" stopColor="#1E3E1E" />
-            <Stop offset="1" stopColor="#1A4A1A" />
+            <Stop offset="0" stopColor="#0F0D2A" />
+            <Stop offset="0.5" stopColor="#151335" />
+            <Stop offset="1" stopColor="#0F0D2A" />
           </LinearGradient>
         </Defs>
         <Rect width={width} height={height} fill="url(#pitchGrad)" rx={12} />
         {[0.25, 0.5, 0.75].map((pct) => (
-          <Rect key={pct} x={0} y={pct * height - 2} width={width} height={height * 0.25} fill="#1B3F1B" opacity={0.3} />
+          <Rect key={pct} x={0} y={pct * height - 2} width={width} height={height * 0.25} fill="#13112E" opacity={0.3} />
         ))}
         <Rect x={16} y={16} width={width - 32} height={height - 32} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={1.5} rx={4} />
         <Line x1={16} y1={height / 2} x2={width - 16} y2={height / 2} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
@@ -188,12 +189,12 @@ function PlayerToken({
       >
         {/* Captain/VC badge */}
         {player.isCaptain && (
-          <View style={[styles.badge, { backgroundColor: '#FFD700' }]}>
+          <View style={[styles.badge, { backgroundColor: Colors.gold }]}>
             <Text style={styles.badgeText}>C</Text>
           </View>
         )}
         {player.isViceCaptain && (
-          <View style={[styles.badge, { backgroundColor: '#81C784' }]}>
+          <View style={[styles.badge, { backgroundColor: Colors.lime }]}>
             <Text style={styles.badgeText}>V</Text>
           </View>
         )}
@@ -265,17 +266,17 @@ const styles = StyleSheet.create({
   },
   captainRing: {
     borderWidth: 3,
-    borderColor: '#FFD700',
+    borderColor: Colors.gold,
   },
   vcRing: {
     borderWidth: 2,
-    borderColor: '#81C784',
+    borderColor: Colors.lime,
     borderStyle: 'dashed',
   },
   highlightRing: {
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    shadowColor: '#FFD700',
+    shadowColor: Colors.accent,
     shadowOpacity: 0.8,
     shadowRadius: 8,
   },
@@ -289,15 +290,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#0A0E1A',
+    borderColor: '#0B0D1F',
   },
   badgeText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#0A0E1A',
+    color: '#0B0D1F',
   },
   nameLabel: {
-    backgroundColor: 'rgba(10,14,26,0.85)',
+    backgroundColor: 'rgba(11,13,31,0.85)',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
     width: TOKEN_SIZE,
     height: TOKEN_SIZE,
     borderRadius: TOKEN_SIZE / 2,
-    backgroundColor: 'rgba(58,58,92,0.5)',
+    backgroundColor: 'rgba(30,28,65,0.5)',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.2)',
     borderStyle: 'dashed',

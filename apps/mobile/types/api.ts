@@ -44,12 +44,29 @@ export interface Match {
   round_name: string | null;
 }
 
+export type RoundStage =
+  | 'GROUP'
+  | 'ROUND_OF_16'
+  | 'QUARTER_FINAL'
+  | 'SEMI_FINAL'
+  | 'THIRD_PLACE'
+  | 'FINAL';
+
 export interface Round {
   id: string;
   name: string;
   start_utc: string;
   deadline_utc: string;
   end_utc: string;
+  stage: RoundStage;
+}
+
+export interface TransferAllowance {
+  free_remaining: number;
+  stage: RoundStage;
+  match_date: string | null;
+  is_knockout: boolean;
+  round_name: string | null;
 }
 
 export interface SquadPlayer {

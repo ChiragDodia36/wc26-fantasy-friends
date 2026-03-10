@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '@/services/api';
+import { Colors } from '@/theme/constants';
 import { ToTBranchCard } from '@/components/ToTBranchCard';
 import type { ToTBranchCard as ToTBranchData } from '@/types/ai';
 
@@ -151,7 +152,7 @@ export default function AICoachScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Strategy Branches</Text>
           {loadingBranches ? (
-            <ActivityIndicator color="#FFD700" size="large" style={{ marginVertical: 24 }} />
+            <ActivityIndicator color={Colors.accent} size="large" style={{ marginVertical: 24 }} />
           ) : (
             branches.map((b) => (
               <ToTBranchCard
@@ -199,7 +200,7 @@ export default function AICoachScreen() {
 
           {sending && (
             <View style={[styles.bubble, styles.assistantBubble]}>
-              <ActivityIndicator color="#FFD700" size="small" />
+              <ActivityIndicator color={Colors.accent} size="small" />
             </View>
           )}
         </View>
@@ -230,9 +231,9 @@ export default function AICoachScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1A' },
+  container: { flex: 1, backgroundColor: Colors.bg },
   content: { padding: 20, paddingBottom: 100, gap: 16 },
-  heading: { fontSize: 28, fontWeight: 'bold', color: '#FFD700' },
+  heading: { fontSize: 28, fontWeight: 'bold', color: Colors.accent },
   subheading: { fontSize: 14, color: '#8888AA', lineHeight: 20 },
   section: { gap: 12 },
   sectionTitle: {
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
   },
-  refreshText: { color: '#FFD700', fontSize: 15, fontWeight: '600' },
+  refreshText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
   chatHint: { fontSize: 13, color: '#555577' },
   bubble: {
     borderRadius: 12,
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderTopWidth: 1,
     borderTopColor: '#1E2333',
-    backgroundColor: '#0A0E1A',
+    backgroundColor: Colors.bg,
   },
   input: {
     flex: 1,
@@ -288,11 +289,11 @@ const styles = StyleSheet.create({
     borderColor: '#2E3550',
   },
   sendBtn: {
-    backgroundColor: '#FFD700',
+    backgroundColor: Colors.accent,
     borderRadius: 10,
     paddingHorizontal: 18,
     justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.4 },
-  sendText: { color: '#0A0E1A', fontWeight: 'bold', fontSize: 15 },
+  sendText: { color: Colors.bg, fontWeight: 'bold', fontSize: 15 },
 });

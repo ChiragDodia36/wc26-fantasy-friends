@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { clearToken } from '@/services/storage';
 import { useAuthStore } from '@/store/authStore';
+import { Colors } from '@/theme/constants';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -83,9 +84,9 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1A' },
+  container: { flex: 1, backgroundColor: Colors.bg },
   content: { padding: 20, paddingBottom: 40 },
-  heading: { fontSize: 28, fontWeight: 'bold', color: '#FFD700', marginBottom: 24 },
+  heading: { fontSize: 28, fontWeight: 'bold', color: Colors.accent, marginBottom: 24 },
 
   section: {
     backgroundColor: '#141824',

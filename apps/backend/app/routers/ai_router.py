@@ -42,6 +42,16 @@ async def qa(payload: QARequest, user=Depends(get_current_user)):
     return AIRecommendation(explanation=data, data=None)
 
 
+@router.get("/transfer-context")
+def transfer_context(
+    squad_id: str,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Return structured data for on-device AI transfer inference."""
+    return ai_coach_service.build_transfer_context(db, squad_id)
+
+
 @router.get("/agent-status")
 async def agent_status(user=Depends(get_current_user)):
     """Return the current status of AI subsystems."""

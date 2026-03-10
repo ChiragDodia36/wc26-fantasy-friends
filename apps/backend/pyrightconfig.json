@@ -1,0 +1,6 @@
+{
+  "root": ".",
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": ["."]
+}

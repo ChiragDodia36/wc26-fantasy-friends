@@ -6,11 +6,12 @@
 import { useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ToTBranchCard as ToTBranchData } from '@/types/ai';
+import { Colors } from '@/theme/constants';
 
 const BRANCH_COLORS: Record<string, { border: string; icon: string; label: string }> = {
-  safe: { border: '#4FC3F7', icon: '🛡️', label: 'Safe & Consistent' },
+  safe: { border: Colors.posDEF, icon: '🛡️', label: 'Safe & Consistent' },
   differential: { border: '#CE93D8', icon: '🎯', label: 'Differential Pick' },
-  fixture: { border: '#81C784', icon: '📅', label: 'Fixture-Based' },
+  fixture: { border: Colors.lime, icon: '📅', label: 'Fixture-Based' },
 };
 
 interface ToTBranchCardProps {
@@ -23,7 +24,7 @@ export function ToTBranchCard({ data, isSelected, onApply }: ToTBranchCardProps)
   const [expanded, setExpanded] = useState(isSelected);
   const config = BRANCH_COLORS[data.branch] ?? BRANCH_COLORS.safe;
   const confidenceColor =
-    data.confidencePct >= 70 ? '#81C784' : data.confidencePct >= 40 ? '#FFD700' : '#EF9A9A';
+    data.confidencePct >= 70 ? Colors.lime : data.confidencePct >= 40 ? Colors.gold : Colors.pink;
 
   return (
     <Pressable
@@ -115,11 +116,11 @@ const styles = StyleSheet.create({
   reasoning: { fontSize: 14, color: '#CCCCDD', lineHeight: 20 },
   playerIds: { fontSize: 12, color: '#8888AA', fontStyle: 'italic' },
   applyBtn: {
-    backgroundColor: '#FFD700',
+    backgroundColor: Colors.accent,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
     marginTop: 4,
   },
-  applyText: { color: '#0A0E1A', fontWeight: 'bold', fontSize: 15 },
+  applyText: { color: Colors.bg, fontWeight: 'bold', fontSize: 15 },
 });

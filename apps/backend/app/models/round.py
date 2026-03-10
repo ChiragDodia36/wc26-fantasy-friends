@@ -1,10 +1,20 @@
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, String, Table, ForeignKey
+from sqlalchemy import Column, DateTime, Enum, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
+
+
+class RoundStage(str, enum.Enum):
+    GROUP = "GROUP"
+    ROUND_OF_16 = "ROUND_OF_16"
+    QUARTER_FINAL = "QUARTER_FINAL"
+    SEMI_FINAL = "SEMI_FINAL"
+    THIRD_PLACE = "THIRD_PLACE"
+    FINAL = "FINAL"
 
 round_matches = Table(
     "round_matches",
@@ -22,6 +32,7 @@ class Round(Base):
     start_utc = Column(DateTime, nullable=False)
     deadline_utc = Column(DateTime, nullable=False)
     end_utc = Column(DateTime, nullable=False)
+    stage = Column(Enum(RoundStage), default=RoundStage.GROUP, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     matches = relationship("Match", secondary=round_matches, back_populates="rounds")

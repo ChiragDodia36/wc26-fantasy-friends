@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import api from '@/services/api';
 import { useSquadStore } from '@/store/squadStore';
+import { Colors } from '@/theme/constants';
 
 const DEFAULT_LEAGUE_ID = 'default';
 
@@ -26,7 +27,7 @@ export default function LineupScreen() {
   }, []);
 
   if (loading && !squad) {
-    return <View style={styles.center}><ActivityIndicator color="#FFD700" size="large" /></View>;
+    return <View style={styles.center}><ActivityIndicator color={Colors.accent} size="large" /></View>;
   }
 
   const starters = squad?.players
@@ -80,7 +81,7 @@ export default function LineupScreen() {
 
       {saving && (
         <View style={styles.savingBar}>
-          <ActivityIndicator color="#FFD700" size="small" />
+          <ActivityIndicator color={Colors.accent} size="small" />
           <Text style={styles.savingText}>Saving...</Text>
         </View>
       )}
@@ -117,19 +118,19 @@ export default function LineupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1A' },
-  center: { flex: 1, backgroundColor: '#0A0E1A', justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: Colors.bg },
+  center: { flex: 1, backgroundColor: Colors.bg, justifyContent: 'center', alignItems: 'center' },
   subtitle: { fontSize: 13, color: '#8888AA', padding: 16, textAlign: 'center' },
   savingBar: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingVertical: 8 },
-  savingText: { color: '#FFD700', fontSize: 13 },
+  savingText: { color: Colors.accent, fontSize: 13 },
   list: { padding: 16, gap: 8 },
   playerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#141824', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#2E3550' },
-  captainCard: { borderColor: '#FFD700', backgroundColor: '#1A2A3A' },
-  vcCard: { borderColor: '#81C784', backgroundColor: '#1A2A1A' },
+  captainCard: { borderColor: Colors.accent, backgroundColor: Colors.bgElevated },
+  vcCard: { borderColor: Colors.lime, backgroundColor: Colors.bgElevated },
   playerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   posText: { fontSize: 12, color: '#8888AA', width: 30 },
   playerName: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
-  roleLabel: { color: '#FFD700', fontSize: 13, fontWeight: 'bold' },
-  vcLabel: { color: '#81C784' },
+  roleLabel: { color: Colors.accent, fontSize: 13, fontWeight: 'bold' },
+  vcLabel: { color: Colors.lime },
   tapHint: { color: '#555577', fontSize: 12 },
 });

@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.league import League, league_memberships
 from app.models.player import Player
@@ -132,10 +132,17 @@ def create_squad(
     if total_price > BUDGET:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Budget exceeded")
 
-    # Delete existing squad for this user/league
+    # Delete existing squad for this user/league (and all dependent records)
     existing = db.query(Squad).filter(Squad.user_id == user_id, Squad.league_id == league_id).first()
     if existing:
+        from app.models.ai_decision import AIDecision
+        from app.models.squad_round_points import SquadRoundPoints
+        from app.models.transfer_allowance import TransferAllowance
+
         db.query(SquadPlayer).filter(SquadPlayer.squad_id == existing.id).delete()
+        db.query(SquadRoundPoints).filter(SquadRoundPoints.squad_id == existing.id).delete()
+        db.query(AIDecision).filter(AIDecision.squad_id == existing.id).delete()
+        db.query(TransferAllowance).filter(TransferAllowance.squad_id == existing.id).delete()
         db.delete(existing)
         db.flush()
 
@@ -161,7 +168,12 @@ def create_squad(
 
 
 def get_user_squad(db: Session, user_id: str, league_id: str) -> Squad | None:
-    return db.query(Squad).filter(Squad.user_id == user_id, Squad.league_id == league_id).first()
+    return (
+        db.query(Squad)
+        .options(joinedload(Squad.players))
+        .filter(Squad.user_id == user_id, Squad.league_id == league_id)
+        .first()
+    )
 
 
 def update_lineup(db: Session, squad_id: str, payload: LineupUpdateRequest) -> Squad:
@@ -184,6 +196,56 @@ def update_lineup(db: Session, squad_id: str, payload: LineupUpdateRequest) -> S
                 "is_vice_captain": sp.is_vice_captain,
             }
         )
+    db.commit()
+    db.refresh(squad)
+    return squad
+
+
+def replace_squad_players(
+    db: Session,
+    squad_id: str,
+    player_ids: List[str],
+    budget_remaining: float,
+) -> Squad:
+    """Replace all players in an existing squad (pre-tournament editing)."""
+    squad = db.get(Squad, squad_id)
+    if not squad:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Squad not found")
+
+    if len(player_ids) != MAX_SQUAD:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Squad must have 15 players")
+    players = db.query(Player).filter(Player.id.in_(player_ids)).all()
+    if len(players) != MAX_SQUAD:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid players")
+
+    # Validate positions & team limits
+    counts = {p: 0 for p in POSITION_COUNTS}
+    per_team: dict[str, int] = {}
+    total_price = Decimal("0")
+    for p in players:
+        counts[p.position] = counts.get(p.position, 0) + 1
+        per_team[p.team_id] = per_team.get(p.team_id, 0) + 1
+        total_price += Decimal(p.price)
+    for pos, required in POSITION_COUNTS.items():
+        if counts.get(pos, 0) != required:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{pos} count invalid")
+    if any(v > MAX_PLAYERS_PER_TEAM for v in per_team.values()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Too many from one team")
+    if total_price > BUDGET:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Budget exceeded")
+
+    # Delete old squad players and insert new ones
+    db.query(SquadPlayer).filter(SquadPlayer.squad_id == squad_id).delete()
+    db.flush()
+
+    squad.budget_remaining = budget_remaining
+    for pid in player_ids:
+        db.add(SquadPlayer(squad_id=squad.id, player_id=pid, is_starting=False))
+    db.flush()
+
+    # Auto-assign lineup
+    _auto_assign_lineup(db, squad, players)
+
     db.commit()
     db.refresh(squad)
     return squad

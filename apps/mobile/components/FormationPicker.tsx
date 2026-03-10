@@ -1,7 +1,11 @@
 /**
  * FormationPicker — horizontal scrollable pill selector for formations.
+ * Active state uses gold gradient pill with press animation.
  */
-import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AnimatedPressable } from './ui/AnimatedPressable';
+import { Colors, Gradients, Radius, Spacing } from '@/theme/constants';
 
 const FORMATIONS = ['4-4-2', '4-3-3', '3-4-3', '3-5-2', '4-5-1', '5-4-1', '5-3-2'];
 
@@ -21,14 +25,22 @@ export function FormationPicker({ selected, onSelect }: FormationPickerProps) {
       renderItem={({ item }) => {
         const isActive = item === selected;
         return (
-          <Pressable
-            style={[styles.pill, isActive && styles.pillActive]}
-            onPress={() => onSelect(item)}
-          >
-            <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-              {item}
-            </Text>
-          </Pressable>
+          <AnimatedPressable scaleAmount={0.95} onPress={() => onSelect(item)}>
+            {isActive ? (
+              <LinearGradient
+                colors={Gradients.pillActive }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pill}
+              >
+                <Text style={styles.pillTextActive}>{item}</Text>
+              </LinearGradient>
+            ) : (
+              <View style={[styles.pill, styles.pillInactive]}>
+                <Text style={styles.pillText}>{item}</Text>
+              </View>
+            )}
+          </AnimatedPressable>
         );
       }}
     />
@@ -36,25 +48,17 @@ export function FormationPicker({ selected, onSelect }: FormationPickerProps) {
 }
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: 16, gap: 8 },
+  list: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
   pill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#1E2333',
+  },
+  pillInactive: {
+    backgroundColor: Colors.bgElevated,
     borderWidth: 1,
-    borderColor: '#2E3550',
+    borderColor: Colors.glassBorder,
   },
-  pillActive: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
-  },
-  pillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8888AA',
-  },
-  pillTextActive: {
-    color: '#0A0E1A',
-  },
+  pillText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  pillTextActive: { fontSize: 13, fontWeight: '700', color: Colors.bg },
 });
